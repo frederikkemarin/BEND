@@ -1,0 +1,1 @@
+from .retrieve_from_bed import Annotation

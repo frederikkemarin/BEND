@@ -28,6 +28,12 @@ class Annotation:
             #self.annotation.loc[:, ['start', 'end']] -= 1 # subtract 1 from all to 0-index, not neccessary in bed format
         if reference_genome is not None: 
             self.genome_dict = SeqIO.to_dict(SeqIO.parse(reference_genome, "fasta"))
+
+    
+    def extend_segments(self, extra_context: int = 0):
+        '''Modify the annotation to include extra context on both sides of the segments'''
+        self.annotation.loc[:, 'start'] = self.annotation.loc[:, 'start'] - extra_context
+        self.annotation.loc[:, 'end'] = self.annotation.loc[:, 'end'] + extra_context
             
     
     def get_item(self, index, reset_start = False, return_type = None, subtract_type = 'transcript') :
