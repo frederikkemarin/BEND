@@ -1,5 +1,4 @@
-# 🧬 BEND  
-Benchmarking DNA Language Models on Biologically Meaningful Tasks
+# 🧬 BEND  - **Ben**chmarking **D**NA Language Models on Biologically Meaningful Tasks
 
 
 Data is available at https://sid.erda.dk/cgi-sid/ls.py?share_id=eXAmVvbRSW
@@ -33,7 +32,6 @@ python3 scripts/precompute_embeddings.py data/enhancers.bed temp/resnetlm_enhanc
 #### TODO 
 - add exhaustive examples or make bash scripts.
 - work out how to actually store the embeddings. script incomplete
-- put tokenizers in the repo 
 
 
 If you need to make embeddings for other purposes than preparing downstream task data, [`bend.embedders`](bend/utils/embedders.py) contains wrapper classes around the individual models.
