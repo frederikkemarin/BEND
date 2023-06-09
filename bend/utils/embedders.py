@@ -16,8 +16,8 @@ Usage: either as functions or as classes.
 embedder = GPNEmbedder()
 embedder = DNABertEmbedder('path/to/checkpoint', kmer=6)
 embedder = NucleotideTransformerEmbedder('checkpoint_name')
-embedder = AWDLSTMEmbedder('path/to/checkpoint', 'path/to/tokenizer')
-embedder = ConvNetEmbedder('path/to/checkpoint', 'path/to/tokenizer')
+embedder = AWDLSTMEmbedder('path/to/checkpoint')
+embedder = ConvNetEmbedder('path/to/checkpoint')
 
 # embed
 sequences =  ["ATGCCCTGGC", "AATACGGT"]
@@ -201,7 +201,7 @@ class NucleotideTransformerEmbedder(BaseEmbedder):
 
 class AWDLSTMEmbedder(BaseEmbedder):
 
-    def load_model(self, model_path, tokenizer_path: str = '../tokenizers/tokenizer_extended/', **kwargs):
+    def load_model(self, model_path, **kwargs):
 
         
 
@@ -210,7 +210,7 @@ class AWDLSTMEmbedder(BaseEmbedder):
         self.model.to(device)
         self.model.eval()
 
-        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_path)
 
     def embed(self, sequences: List[str], disable_tqdm: bool = False):
         '''Tokenizes and embeds sequences. CLS token is removed from the output.'''
@@ -228,17 +228,13 @@ class AWDLSTMEmbedder(BaseEmbedder):
         return embeddings
     
 class ConvNetEmbedder(BaseEmbedder):
-    def load_model(self, model_path, tokenizer_path = '../tokenizers/tokenizer_bare/', **kwargs):
+    def load_model(self, model_path, **kwargs):
 
         logging.set_verbosity_error()
 
         # load tokenizer
-        try:
-            self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
-        except: 
-            raise ValueError('tokenizer_path is not a valid path')
-        
-        
+        self.tokenizer = AutoTokenizer.from_pretrained(model_path)
+        # load model        
         self.model = ConvNetModel.from_pretrained(model_path).to(device).eval()
     
     def embed(self, sequences: List[str], disable_tqdm: bool = False):
@@ -303,11 +299,11 @@ def embed_gpn(sequences):
 def embed_nucleotide_transformer(sequences, model_name):
     return NucleotideTransformerEmbedder(model_name).embed(sequences)
 
-def embed_awdlstm(sequences, model_path, tokenizer_path, disable_tqdm = False, **kwargs):
-    return AWDLSTMEmbedder(model_path, tokenizer_path, **kwargs).embed(sequences, disable_tqdm = disable_tqdm )
+def embed_awdlstm(sequences, model_path, disable_tqdm = False, **kwargs):
+    return AWDLSTMEmbedder(model_path, **kwargs).embed(sequences, disable_tqdm = disable_tqdm )
 
-def embed_convnet(sequences, model_path, tokenizer_path, disable_tqdm = False, **kwargs):
-    return ConvNetEmbedder(model_path, tokenizer_path, **kwargs).embed(sequences, disable_tqdm = disable_tqdm)
+def embed_convnet(sequences, model_path, disable_tqdm = False, **kwargs):
+    return ConvNetEmbedder(model_path, **kwargs).embed(sequences, disable_tqdm = disable_tqdm)
 
 def embed_sequence(sequences : List[str], embedding_type : str = 'categorical', **kwargs):
     '''
@@ -317,7 +313,6 @@ def embed_sequence(sequences : List[str], embedding_type : str = 'categorical', 
         return sequences
     
     if embedding_type == 'categorical' or embedding_type == 'onehot':
-        from .sequences import EncodeSequence
         encode_seq = EncodeSequence() 
         # embed to categorcal  
         sequence = []

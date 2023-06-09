@@ -3,7 +3,8 @@ This script is used to precompute the embeddings for a task.
 In the following step, the embeddings will be used to train a model.
 '''
 import argparse
-from bend.utils import embedders, Annotation
+from bend import embedders
+from bend.utils import Annotation
 from tqdm.auto import tqdm
 
 
@@ -20,7 +21,6 @@ def main():
     parser.add_argument('genome', type=str, help='Path to the reference genome fasta file')
     parser.add_argument('--extra_context', type=int, default=0, help='Number of extra nucleotides to include on each side of the sequence')
     parser.add_argument('--kmer', type=int, default=3, help = 'Kmer size for the DNABERT model')
-    parser.add_argument('--tokenizer', type=str, default='dna', help = 'Tokenizer to use for the AWDLSTM/ConvNet model')
     
 
     args = parser.parse_args()
@@ -31,7 +31,7 @@ def main():
     elif args.model == 'dnabert':
         embedder = embedders.DNABERTEmbedder(args.checkpoint, kmer = args.kmer)
     elif args.model == 'awdlstm':
-        embedder = embedders.AWDLSTMEmbedder(args.checkpoint, tokenizer = args.tokenizer)
+        embedder = embedders.AWDLSTMEmbedder(args.checkpoint)
     elif args.model == 'gpn':
         embedder = embedders.GPNEmbedder(args.checkpoint)
     elif args.model == 'convnet':
