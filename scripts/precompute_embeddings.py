@@ -48,6 +48,9 @@ def main():
         genome_annotation.extend_segments(args.extra_context)
 
 
+    # TODO split train, val, test and save separately
+
+
     for index, row in tqdm(genome_annotation.annotation.iterrows()):
 
         dna = genome_annotation.get_dna_segment(index = index)
