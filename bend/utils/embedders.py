@@ -55,10 +55,10 @@ class BaseEmbedder():
     def __init__(self, *args, **kwargs):
         self.load_model(*args, **kwargs)
 
-    def load_model(*args, **kwargs):
+    def load_model(self, *args, **kwargs):
         raise NotImplementedError
     
-    def embed(*args, **kwargs):
+    def embed(self, *args, **kwargs):
         raise NotImplementedError
 
  

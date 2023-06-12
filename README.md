@@ -47,7 +47,7 @@ If you need to make embeddings for other purposes than preparing downstream task
 
 ## Citation Guidelines
 
-The datasets included in BEND were collected for a variety of sources. When you use. any of the datasets, please ensure to correctly cite the respective original publications describing each dataset.
+The datasets included in BEND were collected from a variety of sources. When you use any of the datasets, please ensure to correctly cite the respective original publications describing each dataset.
 
 ### Gene finding ([GENCODE](https://www.gencodegenes.org/))
 
@@ -64,7 +64,7 @@ The datasets included in BEND were collected for a variety of sources. When you 
 	month = jan,
 	year = {2021},
 	pages = {D916--D923},
-}
+    }
 
 ### Chromatin accessibility ([ENCODE](https://www.encodeproject.org/))
 ### Histone modification ([ENCODE](https://www.encodeproject.org/))
@@ -83,7 +83,7 @@ The datasets included in BEND were collected for a variety of sources. When you 
 	pmid = {22955616},
 	pmcid = {PMC3439153},
 	pages = {57--74},
-}
+    }
 
 
 ### Enhancer annotation ([Fulco et al.](https://www.nature.com/articles/s41588-019-0538-0), [Gasperini et al.](https://www.sciencedirect.com/science/article/pii/S009286741831554X), [Avsec et al.](https://www.nature.com/articles/s41592-021-01252-x) )
@@ -108,7 +108,7 @@ The datasets included in BEND were collected for a variety of sources. When you 
     Publisher: Nature Publishing Group},
         keywords = {Epigenetics, Epigenomics, Functional genomics, Gene expression, Gene regulation},
         pages = {1664--1669},
-    }
+        }
 
 **Enhancers**
 
@@ -127,7 +127,7 @@ The datasets included in BEND were collected for a variety of sources. When you 
         year = {2019},
         keywords = {CRISPR, CRISPRi, RNA-seq, crisprQTL, eQTL, enhancer, gene regulation, genetic screen, human genetics, single cell},
         pages = {377--390.e19},
-    }
+        }
 
 
 **Transcription start sites**
@@ -150,7 +150,7 @@ The datasets included in BEND were collected for a variety of sources. When you 
     Publisher: Nature Publishing Group},
         keywords = {Gene expression, Machine learning, Software, Transcriptomics},
         pages = {1196--1203},
-    }
+        }
 
 
 ### Noncoding Variant Effects ([DeepSEA](https://www.nature.com/articles/nmeth.3547))
