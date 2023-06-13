@@ -68,7 +68,7 @@ def main():
         embedding_alt = embedder.embed([dna_alt])[0]
 
 
-        d = spatial.distance.cosine(embedding_alt[0,embedding_idx], embedding_wt[0,embedding_idx])
+        d = spatial.distance.cosine(embedding_alt[0,args.embedding_idx], embedding_wt[0,args.embedding_idx])
         genome_annotation.annotation.loc[index, 'distance'] = d
 
 
