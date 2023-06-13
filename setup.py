@@ -12,7 +12,7 @@ setup(
     description="Benchmark of DNA Language Models",
     long_description=readme,
     long_description_content_type="text/markdown",
-    author="F. Marin and F. Teufel and M. Horlacher",
+    author="Anonymous",
     packages=['bend'],
     python_requires=">=3.6, <4",
 )
