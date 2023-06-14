@@ -104,7 +104,6 @@ class DNABertEmbedder(BaseEmbedder):
                    dnabert_path: str = '../../external-models/DNABERT/', 
                    kmer: int = 3, ):
 
-        dnabert_path = f'{dnabert_path}/DNABERT{kmer}/'
 
         config = BertConfig.from_pretrained(dnabert_path)
         self.tokenizer = BertTokenizer.from_pretrained(dnabert_path)
@@ -120,9 +119,9 @@ class DNABertEmbedder(BaseEmbedder):
             for sequence in tqdm(sequences, disable=disable_tqdm):
                 sequence = [sequence]
                 kmers = self._seq2kmer_batch(sequence, self.kmer)
-                model_input = self.tokenizer.batch_encode_plus(kmers, add_special_tokens=False, 
-                                                               max_length=len(sequence[0]), return_tensors='pt', 
-                                                               padding='max_length')["input_ids"]
+                model_input = self.tokenizer.batch_encode_plus(kmers, add_special_tokens=True, 
+                                                                    max_length=512, return_tensors='pt', 
+                                                                    padding=True)["input_ids"]
                 if model_input.shape[1] > 512:
                     model_input = torch.split(model_input, 512, dim=1)
                     output = []

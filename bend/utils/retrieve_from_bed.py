@@ -23,7 +23,7 @@ class Annotation:
         '''
         if annotation is not None:
             if isinstance(annotation, str):
-                annotation = pd.read_csv(annotation)
+                annotation = pd.read_csv(annotation, sep='\t')
             self.annotation = annotation
             #self.annotation.loc[:, ['start', 'end']] -= 1 # subtract 1 from all to 0-index, not neccessary in bed format
         if reference_genome is not None: 
@@ -46,7 +46,7 @@ class Annotation:
         item = self.get_item(index)
          
         # get dna segment from genome dict  
-        dna_segment =  str(self.genome_dict[item.chromosome].seq[int(item.start) : int(item.end)+1]) 
+        dna_segment =  str(self.genome_dict[item.chromosome].seq[int(item.start) : int(item.end)]) 
         
         return dna_segment 
     
