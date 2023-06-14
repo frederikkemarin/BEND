@@ -89,8 +89,8 @@ class BaseTrainer:
         epoch = checkpoint['epoch']
         train_loss = checkpoint['train_loss']
         val_loss = checkpoint['val_loss']
-        val_acc = checkpoint['val_acc']
         val_metric = checkpoint[f'val_{self.config.params.metric}']
+        print(f'Loaded checkpoint from epoch {epoch}, train loss: {train_loss}, val loss: {val_loss}, val {self.config.params.metric}: {val_metric}')
         return epoch, train_loss, val_loss, val_metric
     
     def _save_checkpoint(self, epoch, train_loss, val_loss, val_metric):
@@ -212,7 +212,7 @@ class BaseTrainer:
         checkpoint_path = self._get_checkpoint_path(load_checkpoint)
         if checkpoint_path:
             start_epoch, train_loss, val_loss, val_metric = self._load_checkpoint(f'{self.config.output_dir}/checkpoints/{load_checkpoint}')
-        print(f'Loaded checkpoint from epoch {start_epoch}, train loss: {train_loss}, val loss: {val_loss}, val {self.config.params.metric}: {val_metric}')
+            
 
         for epoch in range(1+ start_epoch, epochs + 1):
             train_loss = self.train_epoch(train_loader)

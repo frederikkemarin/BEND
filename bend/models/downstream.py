@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn 
 import torch.nn.functional as F
 import numpy as np
-from .dilated_cnn import ConvNetConfig, ConvNetModel, OneHotEmbedding
+from bend.models.dilated_cnn import ConvNetConfig, ConvNetModel, OneHotEmbedding
 
 
 class TransposeLayer(nn.Module):

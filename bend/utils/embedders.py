@@ -32,7 +32,8 @@ import numpy as np
 from typing import List
 from functools import partial
 
-from ..models import AWDLSTMModelForInference, ConvNetModel
+from bend.models.awd_lstm import AWDLSTMModelForInference
+from bend.models.dilated_cnn import ConvNetModel
 
 from tqdm.auto import tqdm
 from transformers import logging, BertModel, BertConfig, BertTokenizer, AutoModel, AutoTokenizer
