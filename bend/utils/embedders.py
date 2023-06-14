@@ -31,6 +31,7 @@ import torch
 import numpy as np
 from typing import List
 from functools import partial
+import os
 
 from bend.models.awd_lstm import AWDLSTMModelForInference
 from bend.models.dilated_cnn import ConvNetModel
@@ -106,7 +107,11 @@ class DNABertEmbedder(BaseEmbedder):
                    kmer: int = 3, ):
 
         dnabert_path = f'{dnabert_path}/DNABERT{kmer}/'
-
+        # check if path exists
+        
+        if not os.path.exists(dnabert_path):
+            print(f'Path {dnabert_path} does not exists, check if the wrong path was given. If not download from https://github.com/jerryji1993/DNABERT')
+            
         config = BertConfig.from_pretrained(dnabert_path)
         self.tokenizer = BertTokenizer.from_pretrained(dnabert_path)
         self.bert_model = BertModel.from_pretrained(dnabert_path, config=config)
@@ -121,7 +126,7 @@ class DNABertEmbedder(BaseEmbedder):
             for sequence in tqdm(sequences, disable=disable_tqdm):
                 sequence = [sequence]
                 kmers = self._seq2kmer_batch(sequence, self.kmer)
-                model_input = self.tokenizer.batch_encode_plus(kmers, add_special_tokens=False, 
+                model_input = self.tokenizer.batch_encode_plus(kmers, add_special_tokens=True, 
                                                                max_length=len(sequence[0]), return_tensors='pt', 
                                                                padding='max_length')["input_ids"]
                 if model_input.shape[1] > 512:
