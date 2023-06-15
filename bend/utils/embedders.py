@@ -61,7 +61,8 @@ class BaseEmbedder():
     def embed(self, *args, **kwargs):
         raise NotImplementedError
 
- 
+    def __call__(self, sequence, *args, **kwargs):
+        return self.embed([sequence], *args, disable_tqdm=True, **kwargs)[0]
 
 class GPNEmbedder(BaseEmbedder):
 
