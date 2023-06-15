@@ -10,4 +10,4 @@ class TFRecordIterableDataset(torch.utils.data.IterableDataset):
         
     def __iter__(self):
         for example in self.tf_dataset.as_numpy_iterator():
-            yield (torch.from_numpy(example['inputs']), torch.from_numpy(example['outputs']))
+            yield (torch.tensor(example['inputs']), torch.tensor(example['outputs']))
