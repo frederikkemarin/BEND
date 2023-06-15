@@ -19,7 +19,7 @@ import random
 from collections import Counter
 import sys
 from .sequences import EncodeSequence
-from .make_embeddings import embed_sequence
+from .embedders import embed_sequence
 from operator import itemgetter
 
 
