@@ -1,6 +1,7 @@
-biopython==1.81
-pandas==2.0.2
-scikit-learn==1.2.2
-torch==2.0.1
-tqdm==4.65.0
-transformers==4.30.1
+biopython>=1.81
+pandas>=2.0.2
+scikit-learn>=1.2.2
+torch>=2.0.1
+tqdm>=4.65.0
+transformers>=4.30.1
+bioio @ git+https://github.com/mhorlacher/bioio.git
