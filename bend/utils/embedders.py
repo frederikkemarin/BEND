@@ -132,8 +132,6 @@ class DNABertEmbedder(BaseEmbedder):
                 model_input = self.tokenizer.batch_encode_plus(kmers, add_special_tokens=True, 
                                                                max_length=len(sequence[0]), return_tensors='pt', 
                                                                padding='max_length')["input_ids"]
-                                                                    max_length=512, return_tensors='pt', 
-                                                                    padding=True)["input_ids"]
 
                 if model_input.shape[1] > 512:
                     model_input = torch.split(model_input, 512, dim=1)
