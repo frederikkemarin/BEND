@@ -2,9 +2,16 @@ import tqdm
 import tensorflow as tf
 import pysam
 from bioio.tf.utils import multi_hot
+import pandas as pd
+import h5py
 
 # %%
 baseComplement = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A'}
+
+def has_header(file, nrows=20):
+    df = pd.read_csv(file, header=None, nrows=nrows, sep='\s+')
+    df_header = pd.read_csv(file, nrows=nrows, sep='\s+')
+    return tuple(df.dtypes) != tuple(df_header.dtypes)
 
 # %%
 def reverse_complement(dna_string):
@@ -49,3 +56,32 @@ def embed_from_multilabled_bed_gen(bed, reference_fasta, embedder, label_column_
             labels_multi_hot = multi_hot(labels, depth=label_depth)
 
             yield {'inputs': sequence_emebd, 'outputs': labels_multi_hot}
+
+
+def embed_from_bed(bed, reference_fasta, embedder, hdf5_file= None, read_strand = False, label_column_idx=6, label_depth=None, split = None):
+    fasta = Fasta(reference_fasta)
+    # open hdf5 file 
+    hdf5_file = h5py.File(hdf5_file, mode = "r")
+    header = 'infer' if has_header(bed) else None
+    f = pd.read_csv(bed, header = header, sep = '\s+')
+    if split: 
+        f = f[f.iloc[-1] == split]
+
+    for n, line in tqdm.tqdm(f.iterrows()):
+        # get bed row
+        if read_strand:
+            chrom, start, end, strand = line[0], int(line[1]), int(line[2]), line[3]
+        else:
+            chrom, start, end, strand = line[0], int(line[1]), int(line[2]), '+' # strand wil not be reversed
+        if hdf5_file is not None: 
+            labels = hdf5_file['labels'][n]
+        else: 
+            labels = list(map(int, line[label_column_idx].split(',')))
+            labels = multi_hot(labels, depth=label_depth)
+        # get sequence
+        sequence = fasta.fetch(chrom, start, end, strand) # categorical labels
+        # embed sequence
+        sequence_embed = tf.squeeze(tf.constant(embedder(sequence)))
+        yield {'inputs': sequence_embed, 'outputs': labels}
+
+        
