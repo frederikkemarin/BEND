@@ -64,7 +64,8 @@ class BaseEmbedder():
     def embed(self, *args, **kwargs):
         raise NotImplementedError
 
- 
+    def __call__(self, sequence, *args, **kwargs):
+        return self.embed([sequence], *args, disable_tqdm=True, **kwargs)[0]
 
 class GPNEmbedder(BaseEmbedder):
 
@@ -113,6 +114,7 @@ class DNABertEmbedder(BaseEmbedder):
         if not os.path.exists(dnabert_path):
             print(f'Path {dnabert_path} does not exists, check if the wrong path was given. If not download from https://github.com/jerryji1993/DNABERT')
             
+
         config = BertConfig.from_pretrained(dnabert_path)
         self.tokenizer = BertTokenizer.from_pretrained(dnabert_path)
         self.bert_model = BertModel.from_pretrained(dnabert_path, config=config)
@@ -130,6 +132,9 @@ class DNABertEmbedder(BaseEmbedder):
                 model_input = self.tokenizer.batch_encode_plus(kmers, add_special_tokens=True, 
                                                                max_length=len(sequence[0]), return_tensors='pt', 
                                                                padding='max_length')["input_ids"]
+                                                                    max_length=512, return_tensors='pt', 
+                                                                    padding=True)["input_ids"]
+
                 if model_input.shape[1] > 512:
                     model_input = torch.split(model_input, 512, dim=1)
                     output = []

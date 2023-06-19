@@ -24,6 +24,7 @@ class Annotation:
         if annotation is not None:
             if isinstance(annotation, str):
                 annotation = pd.read_csv(annotation, sep = '\s+')
+
             self.annotation = annotation
         if reference_genome is not None: 
             self.genome_dict = SeqIO.to_dict(SeqIO.parse(reference_genome, "fasta"))
