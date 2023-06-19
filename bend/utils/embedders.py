@@ -31,8 +31,11 @@ import torch
 import numpy as np
 from typing import List
 from functools import partial
+import os
 
-from ..models import AWDLSTMModelForInference, ConvNetModel
+from bend.models.awd_lstm import AWDLSTMModelForInference
+from bend.models.dilated_cnn import ConvNetModel
+from bend.utils.download import download_model
 
 from tqdm.auto import tqdm
 from transformers import logging, BertModel, BertConfig, BertTokenizer, AutoModel, AutoTokenizer
@@ -103,8 +106,14 @@ class DNABertEmbedder(BaseEmbedder):
 
     def load_model(self, 
                    dnabert_path: str = '../../external-models/DNABERT/', 
-                   kmer: int = 3, ):
+                   kmer: int = 6, ):
 
+        dnabert_path = f'{dnabert_path}/DNABERT{kmer}/'
+        # check if path exists
+        
+        if not os.path.exists(dnabert_path):
+            print(f'Path {dnabert_path} does not exists, check if the wrong path was given. If not download from https://github.com/jerryji1993/DNABERT')
+            
 
         config = BertConfig.from_pretrained(dnabert_path)
         self.tokenizer = BertTokenizer.from_pretrained(dnabert_path)
@@ -121,8 +130,11 @@ class DNABertEmbedder(BaseEmbedder):
                 sequence = [sequence]
                 kmers = self._seq2kmer_batch(sequence, self.kmer)
                 model_input = self.tokenizer.batch_encode_plus(kmers, add_special_tokens=True, 
+                                                               max_length=len(sequence[0]), return_tensors='pt', 
+                                                               padding='max_length')["input_ids"]
                                                                     max_length=512, return_tensors='pt', 
                                                                     padding=True)["input_ids"]
+
                 if model_input.shape[1] > 512:
                     model_input = torch.split(model_input, 512, dim=1)
                     output = []
@@ -203,8 +215,11 @@ class AWDLSTMEmbedder(BaseEmbedder):
 
     def load_model(self, model_path, **kwargs):
 
-        
-
+        # download model if not exists
+        if not os.path.exists(model_path):
+            print(f'Path {model_path} does not exists, model is downloaded from https://sid.erda.dk/cgi-sid/ls.py?share_id=dbQM0pgSlM&current_dir=pretrained_models&flags=f')
+            download_model(model = 'awd_lstm',
+                           destination_dir = model_path)
         # Get pretrained model
         self.model = AWDLSTMModelForInference.from_pretrained(model_path)
         self.model.to(device)
@@ -231,7 +246,10 @@ class ConvNetEmbedder(BaseEmbedder):
     def load_model(self, model_path, **kwargs):
 
         logging.set_verbosity_error()
-
+        if not os.path.exists(model_path):
+            print(f'Path {model_path} does not exists, model is downloaded from https://sid.erda.dk/cgi-sid/ls.py?share_id=dbQM0pgSlM&current_dir=pretrained_models&flags=f')
+            download_model(model = 'convnet',
+                           destination_dir = model_path)
         # load tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
         # load model        

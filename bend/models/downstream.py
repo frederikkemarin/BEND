@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn 
 import torch.nn.functional as F
 import numpy as np
+from bend.models.dilated_cnn import ConvNetConfig, ConvNetModel, OneHotEmbedding
 
 
 class TransposeLayer(nn.Module):
@@ -18,20 +19,7 @@ class TransposeLayer(nn.Module):
         x = torch.transpose(x, 1, 2)
         return x
     
-class OneHotEmbedding(nn.Module):
-    def __init__(
-        self,
-        hidden_size=None,
-    ):
-        super().__init__()
-        self.hidden_size = hidden_size
-
-    def forward(self, x):
-        if x.dim() > 2:
-            return x
-        else: # if categorically encoded 
-            return F.one_hot(x.long(), num_classes=self.hidden_size).float()
-        
+   
 class UpsampleLayer(nn.Module):
 
     def __init__(self, scale_factor=6, input_size = 2560):
@@ -49,11 +37,7 @@ class UpsampleLayer(nn.Module):
                                                  mode = 'linear', 
                                                  align_corners = False), 
                                      TransposeLayer())
-        '''
-        self.upsample = nn.Sequential(TransposeLayer(), 
-                                     nn.ConvTranspose1d(input_size, input_size*scale_factor, kernel_size = 1), 
-                                     TransposeLayer())
-        '''
+
     
     def forward(self, x):
         x = self.upsample(x)
@@ -122,54 +106,17 @@ class CNN(nn.Module):
         return x
 
 
-class ConvLayer(nn.Module):
-    def __init__(
-        self,
-        hidden_size=None,
-        **kwargs,
-    ):
-        
-        super().__init__()
-        self.conv = nn.Sequential(
-            TransposeLayer(),
-            nn.Conv1d(
-                in_channels=hidden_size,
-                out_channels=hidden_size,
-                padding="same",
-                **kwargs,
-            ),
-            TransposeLayer(),
-            nn.GELU(),
-            nn.LayerNorm(hidden_size),
-        )
-        self.ffn = nn.Sequential(
-            nn.Linear(hidden_size, hidden_size),
-            nn.GELU(),
-            nn.LayerNorm(hidden_size),
-        )
 
-    def forward(self, x):
-        x = x + self.conv(x)
-        x = x + self.ffn(x)
-        return x
-
-
-
-def get_dilation_schedule(dilation_max = 32, dilation_cycle = 6, dilation_double_every =1, n_layers=30):
-    return [
-        min(dilation_max, 2**((i%dilation_cycle)//dilation_double_every))
-        for i in range(n_layers)
-    ]
-
-
-class DilatedConvNet(nn.Module):
+class ConvNetForSupervised(nn.Module):
     def __init__(
         self,
         hidden_size=256,
+        vocab_size=7,
         n_layers=30,
         kernel_size=9,
         dilation_double_every=1,
         dilation_max=32,
+        initializer_range = 0.02,
         dilation_cycle=6,
         output_size = 2,
         hidden_size_downstream = 64, 
@@ -178,21 +125,20 @@ class DilatedConvNet(nn.Module):
         output_downsample_window = None,
         **kwargs, 
     ):
-        super().__init__()
-
-        self.hidden_size = hidden_size
-        self.onehot_embedding = OneHotEmbedding(hidden_size)
-
-        self.dilation_schedule = get_dilation_schedule(dilation_max, dilation_cycle, dilation_double_every, n_layers)
-        self.encoder = nn.Sequential(*[
-            ConvLayer(
-                hidden_size=hidden_size,
-                kernel_size=kernel_size,
-                dilation=self.dilation_schedule[i],
-            )
-            for i in range(n_layers)
-        ])
         
+        super().__init__()
+        self.config = ConvNetConfig(vocab_size=vocab_size, 
+                                               hidden_size=hidden_size,
+                                               n_layers=n_layers,
+                                               kernel_size=kernel_size,
+                                               dilation_double_every=dilation_double_every,
+                                               dilation_max=dilation_max,
+                                               dilation_cycle=dilation_cycle,
+                                               initializer_range=initializer_range)
+        
+
+        self.encoder = ConvNetModel(self.config)
+
 
         self.downstream_cnn = CNN(input_size = hidden_size, output_size = output_size,
                                     hidden_size = hidden_size_downstream,
@@ -202,7 +148,7 @@ class DilatedConvNet(nn.Module):
 
 
     def forward(self, x, activation = 'none', **kwargs):
-        x = self.onehot_embedding(x)
+        x = self.encoder(input_ids=x, **kwargs).last_hidden_state
         x = self.encoder(x)
         x = self.downstream_cnn(x, activation = activation)
 
