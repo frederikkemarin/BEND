@@ -38,8 +38,16 @@ If you need to make embeddings for other purposes than preparing downstream task
 
 
 ### 3. Evaluating models
-Tt is first required that the above step (computing the embeddings is completed).
+It is first required that the above step (computing the embeddings is completed).
 The embeddings should afterwards be located in ```BEND/data/task_name/embedder/*tfrecords```
+To run a runstream task run (from ```BEND/```):
+```
+python scripts/train_on_task.py --config-path conf/supervised_tasks/task_name/ --config-name embedder
+```
+In the case of running gene finding on the convnet embeddings the commandline is then:
+```
+python scripts/train_on_task.py --config-path conf/supervised_tasks/gene_finding/ --config-name convnet
+```
  
 #### TODO
 
