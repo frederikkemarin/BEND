@@ -57,13 +57,7 @@ The results of a run can be found at :
 BEND/downstream_tasks/task_name/embedder/
 ```
 If desired the config files can be modified to change parameters, output/input directory etc. 
- 
-#### TODO
 
-- add stuff to bend that is needed to have a train loop running in `scripts/train_on_task.py`
-- Trainer
-- Dataset class to consume embeddings from prev step
-- Metrics
 
 ## Citation Guidelines
 
