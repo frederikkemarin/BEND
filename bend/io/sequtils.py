@@ -65,7 +65,7 @@ def embed_from_bed(bed, reference_fasta, embedder, hdf5_file= None, read_strand 
     header = 'infer' if has_header(bed) else None
     f = pd.read_csv(bed, header = header, sep = '\s+')
     if split: 
-        f = f[f.iloc[-1] == split]
+        f = f[f.iloc[:, -1] == split]
 
     for n, line in tqdm.tqdm(f.iterrows()):
         # get bed row

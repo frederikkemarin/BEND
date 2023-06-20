@@ -33,17 +33,16 @@ def return_dataloader(data : Union[str, list],
                       batch_size : int = 8, 
                       num_workers : int = 0,
                       padding_value = -100, 
-                      shuffle = True):
+                      shuffle : int = None):
 
     '''Load data to dataloader from a list of paths or a single path'''
     if isinstance(data, str):
         data = [data]
-    dataset = TFRecordIterableDataset(data)
+    dataset = TFRecordIterableDataset(data, shuffle = shuffle)
 
     dataloader = torch.utils.data.DataLoader(dataset, 
                                              batch_size=batch_size, 
                                              num_workers=num_workers, 
-                                             shuffle = shuffle,
                                              collate_fn=partial(collate_fn_pad_to_longest, 
                                                                 padding_value = padding_value))
     return dataloader
@@ -54,7 +53,8 @@ def get_data(train_data : Union[str, list],
              cross_validation : Union[bool, int] = False, 
              batch_size : int = 8,
              num_workers : int = 0,
-             padding_value = -100):
+             padding_value = -100, 
+             shuffle : int = None):
     """
     Function to get data from tfrecords. 
     Args: 
@@ -64,8 +64,10 @@ def get_data(train_data : Union[str, list],
         cross_validation: bool/int, if int, use the given partition as test set, 
                                     +1 as valid set and the rest as train set.
                                     First split is 1.
-
-    
+        batch_size: int, batch size
+        num_workers: int, number of workers for dataloader
+        padding_value: int, value to pad sequences to longest sequence
+        shuffle: int, shuffle value for the train dataloader
     """
 
     if cross_validation is not False:
@@ -88,13 +90,14 @@ def get_data(train_data : Union[str, list],
         train_data = tfrecords
     # get dataloaders
     train_dataloader = return_dataloader(train_data, batch_size = batch_size, 
-                                         num_worker = num_workers, 
-                                         padding_value=padding_value, shuffle = True)
+                                         num_workers = num_workers, 
+                                         padding_value=padding_value, 
+                                         shuffle = shuffle)
     valid_dataloader = return_dataloader(valid_data, batch_size = batch_size, 
-                                         num_worker = num_workers, 
-                                         padding_value=padding_value, shuffle = False)
+                                         num_workers = num_workers, 
+                                         padding_value=padding_value, )
     test_dataloader = return_dataloader(test_data, batch_size = batch_size, 
-                                        num_worker = num_workers, 
-                                        padding_value=padding_value, shuffle=False)
+                                        num_workers = num_workers, 
+                                        padding_value=padding_value, )
 
     return train_dataloader, valid_dataloader, test_dataloader
