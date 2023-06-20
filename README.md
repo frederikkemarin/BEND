@@ -38,8 +38,11 @@ If you need to make embeddings for other purposes than preparing downstream task
 
 
 ### 3. Evaluating models
-
+Tt is first required that the above step (computing the embeddings is completed).
+The embeddings should afterwards be located in ```BEND/data/task_name/embedder/*tfrecords```
+ 
 #### TODO
+
 - add stuff to bend that is needed to have a train loop running in `scripts/train_on_task.py`
 - Trainer
 - Dataset class to consume embeddings from prev step
