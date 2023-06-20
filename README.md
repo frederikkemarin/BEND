@@ -51,6 +51,12 @@ python scripts/train_on_task.py --config-path conf/supervised_tasks/gene_finding
 ```
 The full list of current task names are : ```['gene_finding', 'enhancer_annotation', 'variant_effects', 'histone_modification', 'chromatin_accesibility']```
 And the list of available embedders/models used for training on the tasks are : ```['awdlstm', 'convnet', 'nt_transformer_ms', 'nt_transformer_human_ref', 'dnabert6', 'convnet_supervised', 'onehot', 'nt_transformer_1000g']```
+
+The results of a run can be found at :
+```
+BEND/downstream_tasks/task_name/embedder/
+```
+If desired the config files can be modified to change parameters, output/input directory etc. 
  
 #### TODO
 
