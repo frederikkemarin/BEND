@@ -68,10 +68,13 @@ And the list of available embedders/models used for training on the tasks are :
 - `onehot`
 - `nt_transformer_1000g`
 
+The `train_on_task.py` script calls a trainer class `bend.utils.task_trainer`. All configurations required to adapt these 2 scripts to train on a specific task (input data, downstream model, parameters, evaluation metric etc.) are specified in the task specific [hydra](https://hydra.cc/docs/intro/) config files stored in the [conf](conf/) directory. This minimizes the changes required to the scripts in order to introduce a potential new task. 
+
 The results of a run can be found at :
 ```
 BEND/downstream_tasks/{task_name}/{embedder}/
 ```
+
 If desired, the config files can be modified to change parameters, output/input directory etc.
 
 #### Unsupervised tasks
