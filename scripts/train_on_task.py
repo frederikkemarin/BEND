@@ -34,7 +34,6 @@ def run_experiment(cfg: DictConfig) -> None:
 
     # instantiate optimizer
     optimizer =  hydra.utils.instantiate(cfg.optimizer, params = model.parameters())
-    #optimizer = torch.optim.AdamW(model.parameters(), lr = cfg.params.lr, weight_decay = cfg.params.weight_decay) 
     
     # define criterion
     print(f'Use {cfg.params.criterion} loss function')
