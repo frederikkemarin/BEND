@@ -69,15 +69,15 @@ class BaseEmbedder():
 
 class GPNEmbedder(BaseEmbedder):
 
-    def load_model(self):
+    def load_model(self, model_name: str = "songlab/gpn-brassicales" ):
         try:
             import gpn.model
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError('GPN requires gpn. Install with: pip install git+https://github.com/songlab-cal/gpn.git')
 
 
-        self.model = AutoModel.from_pretrained("gonzalobenegas/gpn-arabidopsis")
-        self.tokenizer = AutoTokenizer.from_pretrained("gonzalobenegas/gpn-arabidopsis")
+        self.model = AutoModel.from_pretrained(model_name)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
 
         self.model.to(device)
         self.model.eval()
