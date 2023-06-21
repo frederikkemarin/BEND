@@ -49,6 +49,11 @@ E.g. to run gene finding on the ResNet-LM embeddings the commandline is then:
 ```
 python scripts/train_on_task.py --config-path conf/supervised_tasks/gene_finding/ --config-name resnetlm
 ```
+Specifcally for running the enhancer annotation task, to run all 10 cross validation folds, run: 
+```
+python scripts/train_on_task.py --config-path conf/supervised_tasks/enhancer_annotation/ --config-name resnetlm --multirun data.cross_validation=1,2,3,4,5,6,7,8,9,10
+```
+This will execute a [multirun with hydra] (https://hydra.cc/docs/tutorials/basic/running_your_app/multi-run/) which ensures that the script is run once for each cross validation configuration. 
 The full list of current task names are : 
 ```
 ['gene_finding', 'enhancer_annotation', 'variant_effects', 'histone_modification', 'chromatin_accesibility']
@@ -57,7 +62,7 @@ And the list of available embedders/models used for training on the tasks are :
 ```
 ['awdlstm', 'resnetlm', 'nt_transformer_ms', 'nt_transformer_human_ref', 'dnabert6', 'resnet_supervised', 'onehot', 'nt_transformer_1000g']
 ```
-The ```train_on_task.py``` calls a trainer class ```bend.utils.task_trainer```. All configurations required to adapt these 2 scripts to train on a specific task (input data, downstream model, parameters, evaluation metric etc.) are specified in the task specific configs. This minimizes the changes required to the scripts in order to introduces a potential new task. 
+The ```train_on_task.py``` calls a trainer class ```bend.utils.task_trainer```. All configurations required to adapt these 2 scripts to train on a specific task (input data, downstream model, parameters, evaluation metric etc.) are specified in the task specific [hydra](https://hydra.cc/docs/intro/) config files. This minimizes the changes required to the scripts in order to introduces a potential new task. 
 The results of a run can be found at :
 ```
 BEND/downstream_tasks/task_name/embedder/
