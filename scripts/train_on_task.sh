@@ -22,7 +22,6 @@ done
 
 echo "Which device"
 echo $CUDA_VISIBLE_DEVICES
-
 echo 'Script used:' $script
 echo 'Config path' $config_path'/'$config_name
 #config_dir=bend/conf # relative path to default conf dir
