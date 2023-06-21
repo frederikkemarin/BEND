@@ -64,7 +64,6 @@ class BaseTrainer:
                 gradient_accumulation_steps: int = 1, ):
 
 
-        # add metric under config.params
         self.model = model
         self.optimizer = optimizer
         self.criterion = criterion
@@ -89,7 +88,6 @@ class BaseTrainer:
         epoch = checkpoint['epoch']
         train_loss = checkpoint['train_loss']
         val_loss = checkpoint['val_loss']
-        val_acc = checkpoint['val_acc']
         val_metric = checkpoint[f'val_{self.config.params.metric}']
         return epoch, train_loss, val_loss, val_metric
     
@@ -149,7 +147,8 @@ class BaseTrainer:
 
     def _get_checkpoint_path(self, 
                              load_checkpoint : Union[bool, int] = True):
-        '''Gets the path of the checkpoint to load
+        '''
+        Gets the path of the checkpoint to load
         Args:
             load_checkpoint: if true, load latest checkpoint and continue training, if int, 
                             load checkpoint from that epoch and continue training
@@ -186,8 +185,8 @@ class BaseTrainer:
         self.model.train()
         train_loss = 0
         for idx, batch in enumerate(train_loader):
-            train_loss += self.train_step(batch, idx = idx, len_dataloader = len(train_loader))
-        train_loss /= len(train_loader)
+            train_loss += self.train_step(batch, idx = idx)
+        train_loss /= (idx +1)
         return train_loss
     
 
@@ -226,56 +225,68 @@ class BaseTrainer:
             print(f'Epoch: {epoch}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Val {self.config.params.metric}: {val_metric:.4f}')
         return
     
-    def train_step(self, batch, idx = 0, len_dataloader =1):
+    def train_step(self, batch, idx = 0):
         self.model.train()
         data, target = batch
-        print('batch')
-        #if self.config.embedding.embedding_type and self.config.embedding.embedding_type != 'onehot':
-        #    data = self._embed(data)
         with torch.autocast(device_type='cuda', dtype=torch.float16):
             output = self.model(data.to(self.device), length = target.shape[-1], 
-                                activation = 'none') # TODO: change activation to be a param
-            #loss = self.criterion(output.permute(0, 2, 1), target.to(self.device).long())
+                                activation = self.config.params.activation) 
             loss = self.criterion(output, target.to(self.device).long())
             loss = loss / self.gradient_accumulation_steps
             
         # Accumulates scaled gradients.
         self.scaler.scale(loss).backward()
-        if ((idx + 1) % self.gradient_accumulation_steps == 0) or (idx + 1 == len_dataloader):
+        if ((idx + 1) % self.gradient_accumulation_steps == 0) : #or (idx + 1 == len_dataloader):
             self.scaler.step(self.optimizer)
             self.scaler.update()
             self.optimizer.zero_grad(set_to_none = True)
             
         return loss.item()
 
-    def validate(self, val_loader, save_output = False):
+    def validate(self, data_loader, save_output = False):
+        '''
+        Validation
+        Args:
+            data_loader: the data loader to be used
+            save_output: if true, save the targets and outputs to a torch file
+        Returns:
+            loss: the average validation loss
+            metric: the average validation metric
+        '''
         self.model.eval()
         loss = 0
         outputs = []
         targets_all = []
 
         with torch.no_grad():
-            for n, (data, target) in enumerate(val_loader):
-            
-                output = self.model(data.to(self.device), activation = 'none')
-                # TODO: activation needs to be input
-                #loss += self.criterion(output.permute(0, 2, 1), target.to(self.device).long()).item()
+            for idx, (data, target) in enumerate(data_loader):
+                mask = target != self.config.data.padding_value
+                output = self.model(data.to(self.device), activation = self.config.params.activation)
                 loss += self.criterion(output, target.to(self.device).long()).item()
-                outputs.append(torch.argmax(self.model.softmax(output), dim=-1).detach().cpu()) 
-                targets_all.append(target.detach().cpu())  
+                outputs.append(torch.argmax(self.model.softmax(output), dim=-1)[mask].detach().cpu()) 
+                targets_all.append(target[mask].detach().cpu())  
 
+        loss /= (idx + 1) 
         if save_output:
             torch.save({'targets': targets_all, 'outputs': outputs}, f'{self.config.output_dir}/test_set.torch')
         
         # compute metrics
-        val_metric = self._compute_metric(torch.cat(targets_all), 
-                                          torch.cat(outputs), 
-                                          self.config.params.metric)
-        val_loss /= (len(val_loader) - 1 )
+        metric = self._calculate_metric(torch.cat(targets_all), 
+                                          torch.cat(outputs))
         
-        return val_loss, val_metric
+        return loss, metric
 
     def test(self, test_loader, checkpoint = None, overwrite=False):
+        '''
+        Testing
+        Args:
+            test_loader: the test data loader
+            checkpoint: if None, load model with lowest validation loss, else load checkpoint
+            overwrite: if true, overwrite the metrics file
+        Returns:
+            loss: the average test loss
+            metric: the average test metric
+        '''
         # get model with lowest validation loss
         df = pd.read_csv(f'{self.config.output_dir}/losses.csv')
         if checkpoint is None:
@@ -286,14 +297,16 @@ class BaseTrainer:
         print(f'Loaded checkpoint from epoch {epoch}, train loss: {train_loss:.3f}, val loss: {val_loss:.3f}, Val {self.config.params.metric}: {val_metric:.3f}')
 
         # test
-        loss, metric = self.validate(test_loader, save_output = True)
+        loss, metric = self.validate(test_loader, save_output = False)
         print(f'Test results : Loss {loss:.4f}, {self.config.params.metric} {metric:.4f}')
         new_metrics = pd.DataFrame(data = [[loss, metric]], columns = ['test_loss', f'test_{self.config.params.metric}'])
         metrics = checkpoint.merge(new_metrics, how = 'cross')
+
         if not overwrite and os.path.exists(f'{self.config.output_dir}/best_model_metrics.csv'):
             best_model_metrics = pd.read_csv(f'{self.config.output_dir}/best_model_metrics.csv') 
             # concat metrics to best model metrics
             metrics = pd.concat([best_model_metrics, metrics], ignore_index=True)
+
         # save metrics to best model metrics
         metrics = metrics.drop_duplicates().reset_index(drop=True)
         metrics.to_csv(f'{self.config.output_dir}/best_model_metrics.csv', index = False)
