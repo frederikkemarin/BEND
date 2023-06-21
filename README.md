@@ -48,7 +48,7 @@ E.g. to run gene finding on the ResNet-LM embeddings the commandline is then:
 ```
 python scripts/train_on_task.py --config-path conf/supervised_tasks/gene_finding/ --config-name resnetlm
 ```
-```
+
 Specifcally for running the enhancer annotation task, to run all 10 cross validation folds, run: 
 ```
 python scripts/train_on_task.py --config-path conf/supervised_tasks/enhancer_annotation/ --config-name resnetlm --multirun data.cross_validation=1,2,3,4,5,6,7,8,9,10
