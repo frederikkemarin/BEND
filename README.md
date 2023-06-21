@@ -1,8 +1,8 @@
 # 🧬 BEND  - **Ben**chmarking **D**NA Language Models on Biologically Meaningful Tasks
 
+![Stars](https://img.shields.io/github/stars/frederikkemarin/BEND?logo=GitHub&color=yellow)
 
 Data is available at https://sid.erda.dk/cgi-sid/ls.py?share_id=eXAmVvbRSW
-
 
 ## Tutorial
 
@@ -29,46 +29,76 @@ python3 scripts/precompute_embeddings.py data/gene_finding.bed temp/dnabert_gene
 # Enhancer annotation with ResNet-LM
 python3 scripts/precompute_embeddings.py data/enhancers.bed temp/resnetlm_enhancers checkpoints/resnetlm data/GRCh38.primary_assembly.genome.fa checkpoints/tokenizer_bare 
 ```
-#### TODO 
-- add exhaustive examples or make bash scripts.
-- work out how to actually store the embeddings. script incomplete
-
 
 If you need to make embeddings for other purposes than preparing downstream task data, [`bend.embedders`](bend/utils/embedders.py) contains wrapper classes around the individual models.
 
 
 ### 3. Evaluating models
-It is first required that the above step (computing the embeddings is completed).
-The embeddings should afterwards be located in ```BEND/data/task_name/embedder/*tfrecords```
+
+#### Training supervised models
+
+It is first required that the above step (computing the embeddings) is completed.
+The embeddings should afterwards be located in `BEND/data/{task_name}/{embedder}/*tfrecords`
 
 To run a runstream task run (from ```BEND/```):
 ```
-python scripts/train_on_task.py --config-path conf/supervised_tasks/task_name/ --config-name embedder
+python scripts/train_on_task.py --config-path conf/supervised_tasks/{task_name}/ --config-name {embedder}
 ```
 E.g. to run gene finding on the ResNet-LM embeddings the commandline is then:
 ```
 python scripts/train_on_task.py --config-path conf/supervised_tasks/gene_finding/ --config-name resnetlm
 ```
-Specifcally for running the enhancer annotation task, to run all 10 cross validation folds, run: 
-```
-python scripts/train_on_task.py --config-path conf/supervised_tasks/enhancer_annotation/ --config-name resnetlm --multirun data.cross_validation=1,2,3,4,5,6,7,8,9,10
-```
 This will execute a [multirun with hydra](https://hydra.cc/docs/tutorials/basic/running_your_app/multi-run/) which ensures that the script is run once for each cross validation configuration. 
 The full list of current task names are : 
-```
-['gene_finding', 'enhancer_annotation', 'variant_effects', 'histone_modification', 'chromatin_accesibility']
-```
+
+- `gene_finding`
+- `enhancer_annotation`
+- `variant_effects`
+- `histone_modification`
+- `chromatin_accesibility`
+
 And the list of available embedders/models used for training on the tasks are : 
-```
-['awdlstm', 'resnetlm', 'nt_transformer_ms', 'nt_transformer_human_ref', 'dnabert6', 'resnet_supervised', 'onehot', 'nt_transformer_1000g']
-```
-The ```train_on_task.py``` calls a trainer class ```bend.utils.task_trainer```. All configurations required to adapt these 2 scripts to train on a specific task (input data, downstream model, parameters, evaluation metric etc.) are specified in the task specific [hydra](https://hydra.cc/docs/intro/) config files. This minimizes the changes required to the scripts in order to introduces a potential new task. 
+
+- `awdlstm`
+- `resnetlm`
+- `nt_transformer_ms`
+- `nt_transformer_human_ref`
+- `dnabert6` 
+- `resnet_supervised`
+- `onehot`
+- `nt_transformer_1000g`
+
+The `train_on_task.py` script calls a trainer class `bend.utils.task_trainer`. All configurations required to adapt these 2 scripts to train on a specific task (input data, downstream model, parameters, evaluation metric etc.) are specified in the task specific [hydra](https://hydra.cc/docs/intro/) config files stored in the [conf](conf/) directory. This minimizes the changes required to the scripts in order to introduce a potential new task. 
+
 The results of a run can be found at :
 ```
-BEND/downstream_tasks/task_name/embedder/
+BEND/downstream_tasks/{task_name}/{embedder}/
 ```
-If desired the config files can be modified to change parameters, output/input directory etc. 
 
+If desired, the config files can be modified to change parameters, output/input directory etc.
+
+#### Unsupervised tasks
+
+For unsupervised prediction of variant effects, embeddings don't have to be precomputed and stored. Embeddings are generated and directly evaluated using
+
+```bash
+python3 scripts/predict_variant_effects.py variant_effects.bed {output_file_name}.csv {model_type} {path_to_checkpoint} {path_to_reference_genome_fasta} --embedding_idx {position_of_embedding}
+```
+
+A notebook with an example of how to run the script and evaluate the results can be found in [examples/unsupervised_variant_effects.ipynb](notebooks/variant_effects.ipynb).
+
+------------
+## Extending BEND
+
+### Adding a new embedder
+
+All embedders are defined in [bend/utils/embedders.py](bend/utils/embedders.py) and inherit `BaseEmbedder`. A new embedder needs to implement `load_model`, which should set up all required attributes of the class and handle loading the model checkpoint into memory. It also needs to implement `embed`, which takes a list of sequences, and returns a list of embedding matrices formatted as numpy arrays. The `embed` method should be able to handle sequences of different lengths.
+
+### Adding a new task
+As the first step, the data for a new task needs to be formatted in the [bed-based format](#1-data-format). If necessary, a `split` and `label` column should be included. The next step is to add new config files to `conf/supervised_tasks`. You should create a new directory named after the task, and add a config file for each embedder you want to evaluate. The config files should be named after the embedder.
+
+
+-------------
 
 ## Citation Guidelines
 
@@ -116,66 +146,66 @@ The datasets included in BEND were collected from a variety of sources. When you
 **Enhancers**
 
     @article{fulco_activity-by-contact_2019,
-        title = {Activity-by-contact model of enhancer–promoter regulation from thousands of {CRISPR} perturbations},
-        volume = {51},
-        copyright = {2019 The Author(s), under exclusive licence to Springer Nature America, Inc.},
-        issn = {1546-1718},
-        url = {https://www.nature.com/articles/s41588-019-0538-0},
-        doi = {10.1038/s41588-019-0538-0},
-        language = {en},
-        number = {12},
-        urldate = {2023-05-23},
-        journal = {Nature Genetics},
-        author = {Fulco, Charles P. and Nasser, Joseph and Jones, Thouis R. and Munson, Glen and Bergman, Drew T. and Subramanian, Vidya and Grossman, Sharon R. and Anyoha, Rockwell and Doughty, Benjamin R. and Patwardhan, Tejal A. and Nguyen, Tung H. and Kane, Michael and Perez, Elizabeth M. and Durand, Neva C. and Lareau, Caleb A. and Stamenova, Elena K. and Aiden, Erez Lieberman and Lander, Eric S. and Engreitz, Jesse M.},
-        month = dec,
-        year = {2019},
-        note = {Number: 12
+    title = {Activity-by-contact model of enhancer–promoter regulation from thousands of {CRISPR} perturbations},
+    volume = {51},
+    copyright = {2019 The Author(s), under exclusive licence to Springer Nature America, Inc.},
+    issn = {1546-1718},
+    url = {https://www.nature.com/articles/s41588-019-0538-0},
+    doi = {10.1038/s41588-019-0538-0},
+    language = {en},
+    number = {12},
+    urldate = {2023-05-23},
+    journal = {Nature Genetics},
+    author = {Fulco, Charles P. and Nasser, Joseph and Jones, Thouis R. and Munson, Glen and Bergman, Drew T. and Subramanian, Vidya and Grossman, Sharon R. and Anyoha, Rockwell and Doughty, Benjamin R. and Patwardhan, Tejal A. and Nguyen, Tung H. and Kane, Michael and Perez, Elizabeth M. and Durand, Neva C. and Lareau, Caleb A. and Stamenova, Elena K. and Aiden, Erez Lieberman and Lander, Eric S. and Engreitz, Jesse M.},
+    month = dec,
+    year = {2019},
+    note = {Number: 12
     Publisher: Nature Publishing Group},
-        keywords = {Epigenetics, Epigenomics, Functional genomics, Gene expression, Gene regulation},
-        pages = {1664--1669},
-        }
+    keywords = {Epigenetics, Epigenomics, Functional genomics, Gene expression, Gene regulation},
+    pages = {1664--1669},
+    }
 
 **Enhancers**
 
     @article{gasperini_genome-wide_2019,
-        title = {A {Genome}-wide {Framework} for {Mapping} {Gene} {Regulation} via {Cellular} {Genetic} {Screens}},
-        volume = {176},
-        issn = {0092-8674},
-        url = {https://www.sciencedirect.com/science/article/pii/S009286741831554X},
-        doi = {10.1016/j.cell.2018.11.029},
-        language = {en},
-        number = {1},
-        urldate = {2023-05-23},
-        journal = {Cell},
-        author = {Gasperini, Molly and Hill, Andrew J. and McFaline-Figueroa, José L. and Martin, Beth and Kim, Seungsoo and Zhang, Melissa D. and Jackson, Dana and Leith, Anh and Schreiber, Jacob and Noble, William S. and Trapnell, Cole and Ahituv, Nadav and Shendure, Jay},
-        month = jan,
-        year = {2019},
-        keywords = {CRISPR, CRISPRi, RNA-seq, crisprQTL, eQTL, enhancer, gene regulation, genetic screen, human genetics, single cell},
-        pages = {377--390.e19},
-        }
+    title = {A {Genome}-wide {Framework} for {Mapping} {Gene} {Regulation} via {Cellular} {Genetic} {Screens}},
+    volume = {176},
+    issn = {0092-8674},
+    url = {https://www.sciencedirect.com/science/article/pii/S009286741831554X},
+    doi = {10.1016/j.cell.2018.11.029},
+    language = {en},
+    number = {1},
+    urldate = {2023-05-23},
+    journal = {Cell},
+    author = {Gasperini, Molly and Hill, Andrew J. and McFaline-Figueroa, José L. and Martin, Beth and Kim, Seungsoo and Zhang, Melissa D. and Jackson, Dana and Leith, Anh and Schreiber, Jacob and Noble, William S. and Trapnell, Cole and Ahituv, Nadav and Shendure, Jay},
+    month = jan,
+    year = {2019},
+    keywords = {CRISPR, CRISPRi, RNA-seq, crisprQTL, eQTL, enhancer, gene regulation, genetic screen, human genetics, single cell},
+    pages = {377--390.e19},
+    }
 
 
 **Transcription start sites**
 
     @article{avsec_effective_2021,
-        title = {Effective gene expression prediction from sequence by integrating long-range interactions},
-        volume = {18},
-        copyright = {2021 The Author(s)},
-        issn = {1548-7105},
-        url = {https://www.nature.com/articles/s41592-021-01252-x},
-        doi = {10.1038/s41592-021-01252-x},
-        language = {en},
-        number = {10},
-        urldate = {2023-05-23},
-        journal = {Nature Methods},
-        author = {Avsec, Žiga and Agarwal, Vikram and Visentin, Daniel and Ledsam, Joseph R. and Grabska-Barwinska, Agnieszka and Taylor, Kyle R. and Assael, Yannis and Jumper, John and Kohli, Pushmeet and Kelley, David R.},
-        month = oct,
-        year = {2021},
-        note = {Number: 10
+    title = {Effective gene expression prediction from sequence by integrating long-range interactions},
+    volume = {18},
+    copyright = {2021 The Author(s)},
+    issn = {1548-7105},
+    url = {https://www.nature.com/articles/s41592-021-01252-x},
+    doi = {10.1038/s41592-021-01252-x},
+    language = {en},
+    number = {10},
+    urldate = {2023-05-23},
+    journal = {Nature Methods},
+    author = {Avsec, Žiga and Agarwal, Vikram and Visentin, Daniel and Ledsam, Joseph R. and Grabska-Barwinska, Agnieszka and Taylor, Kyle R. and Assael, Yannis and Jumper, John and Kohli, Pushmeet and Kelley, David R.},
+    month = oct,
+    year = {2021},
+    note = {Number: 10
     Publisher: Nature Publishing Group},
-        keywords = {Gene expression, Machine learning, Software, Transcriptomics},
-        pages = {1196--1203},
-        }
+    keywords = {Gene expression, Machine learning, Software, Transcriptomics},
+    pages = {1196--1203},
+    }
 
 
 ### Noncoding Variant Effects ([DeepSEA](https://www.nature.com/articles/nmeth.3547))
