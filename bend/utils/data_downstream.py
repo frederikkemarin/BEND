@@ -47,17 +47,20 @@ def return_dataloader(data : Union[str, list],
                                                                 padding_value = padding_value))
     return dataloader
 
-def get_data(train_data : Union[str, list], 
-             valid_data : Union[str, list] = None, 
-             test_data : Union[str, list] = None, 
+def get_data(data_dir : str, 
+            train_data : list = None, 
+             valid_data : list = None, 
+             test_data : list = None, 
              cross_validation : Union[bool, int] = False, 
              batch_size : int = 8,
              num_workers : int = 0,
              padding_value = -100, 
-             shuffle : int = None):
+             shuffle : int = None, 
+             **kwargs):
     """
     Function to get data from tfrecords. 
     Args: 
+        data_dir: path to data directory containing the tfrecords
         train_data: path to train tfrecord, in case of cross validation can give simply the path to the data directory
         valid_data: path to valid tfrecord
         test_data: path to test tfrecord
@@ -73,9 +76,8 @@ def get_data(train_data : Union[str, list],
     if cross_validation is not False:
         cross_validation = int(cross_validation) -1 
         # get basepath of data directory
-        basepath = os.path.dirname(train_data)
         # get all tfrecords in data directory
-        tfrecords = glob.glob(os.path.join(basepath, '*.tfrecord'))
+        tfrecords = glob.glob(f'{data_dir}/*.tfrecord')
         # sort tfrecords
         tfrecords.sort()
         test_data = tfrecords[cross_validation]
@@ -88,6 +90,13 @@ def get_data(train_data : Union[str, list],
         tfrecords.remove(test_data)
         tfrecords.remove(valid_data)
         train_data = tfrecords
+    else: 
+        # join data_dir with each item in train_data, valid_data and test_data 
+
+        train_data = [f'{data_dir}/{x}' for x in train_data]
+        valid_data = [f'{data_dir}/{x}' for x in valid_data]
+        test_data = [f'{data_dir}/{x}' for x in test_data]
+
     # get dataloaders
     train_dataloader = return_dataloader(train_data, batch_size = batch_size, 
                                          num_workers = num_workers, 

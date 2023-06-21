@@ -1,9 +1,0 @@
-MANIFEST.in
-README.md
-pyproject.toml
-setup.py
-bend/__init__.py
-bend.egg-info/PKG-INFO
-bend.egg-info/SOURCES.txt
-bend.egg-info/dependency_links.txt
-bend.egg-info/top_level.txt

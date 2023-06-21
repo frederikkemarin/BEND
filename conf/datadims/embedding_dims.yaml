@@ -1,0 +1,9 @@
+onehot: 5
+gpn: 512
+nt_transformer_2B5_1000G: 2560
+nt_transformer_ms: 2560
+nt_transformer_1000G: 1280
+nt_transformer_human_ref: 1280
+convnet: 256
+dnabert6: 768
+awdlstm: 64

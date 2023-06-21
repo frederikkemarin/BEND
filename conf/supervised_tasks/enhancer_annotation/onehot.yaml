@@ -1,61 +1,44 @@
-output_dir: /z/home/frma/projects/DNA-LM/downstream_tasks/enhancer_classification/below50k_validated/split_chromosome/onehot/64_hidden_size/split${data.partition_split}/
+defaults:
+  - datadims : [label_dims,embedding_dims]
+  - _self_
+hydra : 
+  searchpath:
+    #- pkg://conf
+    - file://conf 
+task : enhancer_annotation 
+embedder : onehot
+output_dir: ./downstream_tasks/${task}/${embedder}/split_${data.cross_validation}
 model:
-  _target_: models.downstream.CNN
-  input_size: ${datadims.${data.feature_type}}
-  output_size: ${datadims.${data.label_type}}
-  hidden_size: 64
+  _target_: bend.models.downstream.CNN
+  input_size: ${datadims.${embedder}}
+  output_size: ${datadims.${task}}
+  hidden_size: 2
   kernel_size: 3
   upsample_factor: null
   output_downsample_window: null
+optimizer : 
+  _target_ : torch.optim.AdamW 
+  lr : 0.001
+  weight_decay: 0.01
 data:
-  _target_: utils.data_downstream.split_data
-  dir: /z/home/frma/projects/DNA-LM/data/gene_enhancer_pair/
-  data: ${data.dir}/torch_files/
-  partition_split : 10
-  indices: ${data.dir}/partitions/below50k/only_validated/split_on_chromosome/split${data.partition_split}.csv
-  same_set: false
-  split: null
-  num_workers: 32
-  sample_strand: false
-  sample_by_length: false
-  batch_size: 8
-  seed: 42
-  ignore_index: -100
-  label_type: enhancer
-  feature_type: onehot
-  embedding:
-    embedding_type: categorical
-  superset_factor: 1
-  keys:
-  - dna
-  - label
-  - validated
+  _target_: bend.utils.data_downstream.get_data
+  cross_validation : false
+  batch_size : 8
+  num_workers : 0
+  padding_value : -100
+  shuffle : 500
+  data_dir : ./data/${task}/${embedder}/
+  cross_validation : 1 # which split to run in the cross validation
 params:
   epochs: 100
-  lr: 0.001
-  weight_decay: 0.01
   load_checkpoint: false
-  gradient_accumulation_steps: 1
   mode: train
+  gradient_accumulation_steps: 1
   criterion: cross_entropy
   class_weights:
   - 1
   - 82.86
+  metric : mcc
+  activation : none
 wandb:
-  mode: offline
-  entity: fmarin
-  project: dna-lm-enhancer
-  name: NT_human_ref
-datadims:
-  simple_DA: 5
-  simple_direction_DA: 9
-  codon_direction_DA: 25
-  onehot: 5
-  gpn: 512
-  nt_transformer_2B5_1000G: 2560
-  nt_transformer_2B5_multi_species: 2560
-  nt_transformer_500M_1000G: 1280
-  nt_transformer_500M_human_ref: 1280
-  convnet: 256
-  cage_human: 638
-  enhancer: 2
+  mode : disabled 

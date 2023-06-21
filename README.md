@@ -44,10 +44,11 @@ To run a runstream task run (from ```BEND/```):
 ```
 python scripts/train_on_task.py --config-path conf/supervised_tasks/{task_name}/ --config-name {embedder}
 ```
-E.g. to run gene finding on the convnet embeddings the commandline is then:
-```sh
-python3 scripts/train_on_task.py --config-path conf/supervised_tasks/gene_finding/ --config-name convnet
+E.g. to run gene finding on the ResNet-LM embeddings the commandline is then:
 ```
+python scripts/train_on_task.py --config-path conf/supervised_tasks/gene_finding/ --config-name resnetlm
+```
+This will execute a [multirun with hydra](https://hydra.cc/docs/tutorials/basic/running_your_app/multi-run/) which ensures that the script is run once for each cross validation configuration. 
 The full list of current task names are : 
 
 - `gene_finding`
@@ -59,11 +60,11 @@ The full list of current task names are :
 And the list of available embedders/models used for training on the tasks are : 
 
 - `awdlstm`
-- `convnet`
+- `resnetlm`
 - `nt_transformer_ms`
 - `nt_transformer_human_ref`
 - `dnabert6` 
-- `convnet_supervised`
+- `resnet_supervised`
 - `onehot`
 - `nt_transformer_1000g`
 

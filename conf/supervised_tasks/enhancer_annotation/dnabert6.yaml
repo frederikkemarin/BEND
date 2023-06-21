@@ -6,7 +6,7 @@ hydra :
     #- pkg://conf
     - file://conf 
 task : enhancer_annotation 
-embedder : nt_transformer_ms
+embedder : dnabert6
 output_dir: ./downstream_tasks/${task}/${embedder}/split_${data.cross_validation}
 model:
   _target_: bend.models.downstream.CNN
