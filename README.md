@@ -53,7 +53,7 @@ Specifcally for running the enhancer annotation task, to run all 10 cross valida
 ```
 python scripts/train_on_task.py --config-path conf/supervised_tasks/enhancer_annotation/ --config-name resnetlm --multirun data.cross_validation=1,2,3,4,5,6,7,8,9,10
 ```
-This will execute a [multirun with hydra] (https://hydra.cc/docs/tutorials/basic/running_your_app/multi-run/) which ensures that the script is run once for each cross validation configuration. 
+This will execute a [multirun with hydra](https://hydra.cc/docs/tutorials/basic/running_your_app/multi-run/) which ensures that the script is run once for each cross validation configuration. 
 The full list of current task names are : 
 ```
 ['gene_finding', 'enhancer_annotation', 'variant_effects', 'histone_modification', 'chromatin_accesibility']
