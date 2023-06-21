@@ -1,44 +1,45 @@
-output_dir: ./downstream_tasks/${task}/${embedder}/
+defaults:
+  - datadims : [label_dims,embedding_dims]
+  - _self_
+hydra : 
+  searchpath:
+    #- pkg://conf
+    - file://conf 
 task : gene_finding 
 embedder : convnet
+output_dir: ./downstream_tasks/${task}/${embedder}/
 model:
-  _target_: models.downstream.CNN
+  _target_: bend.models.downstream.CNN
   input_size: ${datadims.${embedder}}
-  output_size: ${datadims.${task}_label_dim}
+  output_size: ${datadims.${task}}
   hidden_size: 64
   kernel_size: 3
   upsample_factor: null
+optimizer : 
+  _target_ : torch.optim.AdamW 
+  lr : 0.003
+  weight_decay: 0.01
 data:
   _target_: bend.utils.data_downstream.get_data
   cross_validation : false
   batch_size : 64
-  num_workers : 32
+  num_workers : 0
   padding_value : -100
   shuffle : 5000
-  train_data : /z/home/frma/samples_tfrecord/train.tfrecord
-  valid_data : /z/home/frma/samples_tfrecord/valid.tfrecord
-  test_data :  /z/home/frma/samples_tfrecord/test.tfrecord
+  data_dir : ./data/${task}/${embedder}/
+  train_data : [train.tfrecord]
+  valid_data : [valid.tfrecord]
+  test_data :  [test.tfrecord]
 params:
   epochs: 100
-  lr: 0.003
-  weight_decay: 0.01
   load_checkpoint: false
   mode: train
   gradient_accumulation_steps: 1
   criterion: cross_entropy
   class_weights: null
-datadims:
-  gene_finding_label_dim: 9
-  enhancer_annotation_label_dim: 2
-  variant_effects_label_dim: 2
-  histone_modification_label_dim: 2
-  chromatin_accesibility_label_dim: 2
-  onehot: 5
-  gpn: 512
-  nt_transformer_2B5_1000G: 2560
-  nt_transformer_ms: 2560
-  nt_transformer_1000G: 1280
-  nt_transformer_human_ref: 1280
-  convnet: 256
-  dnabert6: 768
-  awdlstm: 64
+  metric : mcc
+  activation : none
+wandb:
+  mode : disabled 
+
+
