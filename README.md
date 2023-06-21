@@ -38,12 +38,32 @@ If you need to make embeddings for other purposes than preparing downstream task
 
 
 ### 3. Evaluating models
+It is first required that the above step (computing the embeddings is completed).
+The embeddings should afterwards be located in ```BEND/data/task_name/embedder/*tfrecords```
 
-#### TODO
-- add stuff to bend that is needed to have a train loop running in `scripts/train_on_task.py`
-- Trainer
-- Dataset class to consume embeddings from prev step
-- Metrics
+To run a runstream task run (from ```BEND/```):
+```
+python scripts/train_on_task.py --config-path conf/supervised_tasks/task_name/ --config-name embedder
+```
+E.g. to run gene finding on the convnet embeddings the commandline is then:
+```
+python scripts/train_on_task.py --config-path conf/supervised_tasks/gene_finding/ --config-name convnet
+```
+The full list of current task names are : 
+```
+['gene_finding', 'enhancer_annotation', 'variant_effects', 'histone_modification', 'chromatin_accesibility']
+```
+And the list of available embedders/models used for training on the tasks are : 
+```
+['awdlstm', 'convnet', 'nt_transformer_ms', 'nt_transformer_human_ref', 'dnabert6', 'convnet_supervised', 'onehot', 'nt_transformer_1000g']
+```
+
+The results of a run can be found at :
+```
+BEND/downstream_tasks/task_name/embedder/
+```
+If desired the config files can be modified to change parameters, output/input directory etc. 
+
 
 ## Citation Guidelines
 

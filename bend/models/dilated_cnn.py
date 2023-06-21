@@ -1,5 +1,6 @@
 '''
 A ResNet with dilated convolutions masked language model.
+code from https://github.com/songlab-cal/gpn
 '''
 import torch
 import torch.nn as nn
@@ -109,7 +110,11 @@ class OneHotEmbedding(nn.Module):
         self.hidden_size = hidden_size
 
     def forward(self, x):
-        return F.one_hot(x, num_classes=self.hidden_size).float()
+        if x.dim() > 2: # already onehot embedded 
+            return x
+        else: # if categorically encoded 
+            return F.one_hot(x.long(), num_classes=self.hidden_size).float()
+
 
 
 def get_dilation_schedule(config):

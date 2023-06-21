@@ -1,0 +1,59 @@
+output_dir: /z/home/frma/bend_gene_annotation/${data.feature_type}/
+model:
+  _target_: bend.models.downstream.CNN
+  input_size: ${datadims.${data.feature_type}}
+  output_size: ${datadims.${data.label_type}}
+  hidden_size: 64
+  kernel_size: 3
+  upsample_factor: null
+data:
+  _target_: bend.utils.data_downstream.split_data
+  dir: /z/home/frma/projects/latent_crf/data/human/transcript_datasets/no_dupl_max_len_12k_random_flank_1k/
+  data: ${data.dir}/data/
+  indices: null
+  same_set: false
+  split: graphpart
+  val_size: 0.1
+  test_size: 0.1
+  num_workers: 32
+  sample_strand: false
+  sample_by_length: true
+  edge_file: ${data.dir}/protein_edges0.2.csv
+  batch_size: 64
+  seed: 42
+  ignore_index: -100
+  label_type: simple_direction_DA
+  feature_type: awdlstm
+  embedding: null
+  keys:
+  - features_${data.feature_type}
+  - labels_${data.label_type}
+  partition_split: 4
+params:
+  epochs: 100
+  lr: 0.003
+  weight_decay: 0.01
+  load_checkpoint: false
+  mode: train
+  gradient_accumulation_steps: 1
+  criterion: cross_entropy
+  class_weights: null
+  metric: mcc
+wandb:
+  mode: disabled
+  entity: fmarin
+  project: dna-lm-gene-finding
+  name: onehot
+datadims:
+  simple_DA: 5
+  simple_direction_DA: 9
+  codon_direction_DA: 25
+  onehot: 5
+  gpn: 512
+  nt_transformer_2B5_1000G: 2560
+  nt_transformer_2B5_multi_species: 2560
+  nt_transformer_500M_1000G: 1280
+  nt_transformer_500M_human_ref: 1280
+  convnet: 256
+  dnabert: 768
+  awdlstm: 64
