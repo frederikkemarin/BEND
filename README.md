@@ -45,9 +45,9 @@ To run a runstream task run (from ```BEND/```):
 ```
 python scripts/train_on_task.py --config-path conf/supervised_tasks/task_name/ --config-name embedder
 ```
-E.g. to run gene finding on the convnet embeddings the commandline is then:
+E.g. to run gene finding on the ResNet-LM embeddings the commandline is then:
 ```
-python scripts/train_on_task.py --config-path conf/supervised_tasks/gene_finding/ --config-name convnet
+python scripts/train_on_task.py --config-path conf/supervised_tasks/gene_finding/ --config-name resnetlm
 ```
 The full list of current task names are : 
 ```
@@ -55,7 +55,7 @@ The full list of current task names are :
 ```
 And the list of available embedders/models used for training on the tasks are : 
 ```
-['awdlstm', 'convnet', 'nt_transformer_ms', 'nt_transformer_human_ref', 'dnabert6', 'convnet_supervised', 'onehot', 'nt_transformer_1000g']
+['awdlstm', 'resnetlm', 'nt_transformer_ms', 'nt_transformer_human_ref', 'dnabert6', 'resnet_supervised', 'onehot', 'nt_transformer_1000g']
 ```
 The ```train_on_task.py``` calls a trainer class ```bend.utils.task_trainer```. All configurations required to adapt these 2 scripts to train on a specific task (input data, downstream model, parameters, evaluation metric etc.) are specified in the task specific configs. This minimizes the changes required to the scripts in order to introduces a potential new task. 
 The results of a run can be found at :
