@@ -1,0 +1,65 @@
+hydra : 
+  searchpath:
+    - file://conf 
+data_dir : /z/home/frma/erda_dir/neurips2023_BEND/data/
+embedders_dir : ./embedders/
+models : 
+  - dnabert6
+  - resnetlm
+  - awdlstm
+  - nt_transformer_ms
+  - nt_transformer_human_ref
+  - nt_transformer_1000g
+  - onehot
+tasks : 
+  - gene_finding
+  - enhancer_annotation
+  - variant_effects
+  - histone_modification
+  - chromatin_accesibility
+# model instatiators 
+dnabert6:
+  _target_ : bend.utils.embedders.DNABertEmbedder
+  model_path : ${embedders_dir}/dnabert6
+resnetlm : 
+  _target_ : bend.utils.embedders.ConvNetEmbedder
+  model_path : ${embedders_dir}/resnetlm/
+awdlstm : 
+  _target_ : bend.utils.embedders.AWDLSTMEmbedder
+  model_path : ${embedders_dir}/awdlstm/
+nt_transformer_ms :
+  _target_ : bend.utils.embedders.NucleotideTransformerEmbedder
+  model_name : InstaDeepAI/nucleotide-transformer-2.5b-multi-species
+nt_transformer_human_ref:
+  _target_ : bend.utils.embedders.NucleotideTransformerEmbedder
+  model_name : InstaDeepAI/nucleotide-transformer-500m-human-ref
+nt_transformer_1000g:
+  _target_ : bend.utils.embedders.NucleotideTransformerEmbedder
+  model_name : InstaDeepAI/nucleotide-transformer-2.5b-1000g
+onehot:
+  _target_ : bed.utils.embedders.OneHotEmbedder
+# data configurations for each task
+gene_finding:
+  reference_fasta : ${data_dir}/genomes/GRCh38.primary_assembly.genome.fa
+  hdf5_file : ${data_dir}/gene_finding/gene_finding.hdf5
+  bed : ${data_dir}/gene_finding/gene_finding.bed 
+  read_strand : false 
+enhancer_annotation:
+  reference_fasta : ${data_dir}/genomes/GRCh38.primary_assembly.genome.fa
+  hdf5_file : ${data_dir}/enhancer_annotation/enhancer_annotation.hdf5
+  bed : ${data_dir}/enhancer_annotation/enhancer_annotation.bed
+variant_effects:
+  reference_fasta : ${data_dir}/genomes/GRCh38.primary_assembly.genome.fa
+  bed : ${data_dir}/variant_effects/variant_effects.bed
+  read_strand : false
+histone_modification:
+  bed : samples.Histone-ChIP.512.bed
+  reference_fasta : ${data_dir}/genomes/GRCh38.primary_assembly.genome.fa
+  read_strand : false
+  hdf5_file : null
+chromatin_accesibility:
+  bed : samples.DNase-I.512.bed
+  reference_fasta : ${data_dir}/genomes/GRCh37.no-chr.fa
+  read_strand : false
+  hdf5_file : null
+
