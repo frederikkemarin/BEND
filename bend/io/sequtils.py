@@ -84,4 +84,10 @@ def embed_from_bed(bed, reference_fasta, embedder, hdf5_file= None, read_strand 
         sequence_embed = tf.squeeze(tf.constant(embedder(sequence)))
         yield {'inputs': sequence_embed, 'outputs': labels}
 
+
+def get_splits(bed):
+    header = 'infer' if has_header(bed) else None
+    f = pd.read_csv(bed, header = header, sep = '\s+')
+    splits = f.iloc[:, -1].unique().tolist() # splits should be in last column
+    return splits
         
