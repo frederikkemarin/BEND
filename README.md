@@ -22,13 +22,15 @@ chr3	    1070026	1070436	valid	0
 ### 2. Computing embeddings
 
 For training downstream models, it is practical to precompute and save the embeddings to avoid recomputing them at each epoch. As embeddings can grow large when working with genomes, we use TFRecords as the format.
-```sh
-# Gene finding with DNABERT
-python3 scripts/precompute_embeddings.py data/gene_finding.bed temp/dnabert_gene_finding/ dnabert checkpoints/dnabert data/GRCh38.primary_assembly.genome.fa --kmer 6
-
-# Enhancer annotation with ResNet-LM
-python3 scripts/precompute_embeddings.py data/enhancers.bed temp/resnetlm_enhancers checkpoints/resnetlm data/GRCh38.primary_assembly.genome.fa checkpoints/tokenizer_bare 
+Firstly download the desired data from the [data folder](https://sid.erda.dk/cgi-sid/ls.py?share_id=eXAmVvbRSW) and place it in BEND/ (for ease of use maintain the same folder structure). 
+To precompute the embeddings for all models and tasks, run : 
 ```
+python scripts/precompute_embeddings.py. 
+```
+This script automatically calls the hydra config file at ```/conf/embeddings/embed.yaml```. 
+
+To alter the tasks/model for which to compute the embeddings, please alter the ```tasks``` and/or the ```models``` list in the config file. 
+
 
 If you need to make embeddings for other purposes than preparing downstream task data, [`bend.embedders`](bend/utils/embedders.py) contains wrapper classes around the individual models.
 
