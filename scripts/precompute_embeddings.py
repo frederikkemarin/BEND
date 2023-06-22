@@ -1,60 +1,33 @@
-'''
-This script is used to precompute the embeddings for a task.
-In the following step, the embeddings will be used to train a model.
-'''
-import argparse
-from bend import embedders
-from bend.utils import Annotation
-from tqdm.auto import tqdm
+import hydra 
+from omegaconf import DictConfig, OmegaConf
+import torch
+import os
+import bend.io.sequtils as sequtils
+import pandas as pd
+from bioio.tf import dataset_from_iterable
+from bioio.tf import dataset_to_tfrecord
+
+# load config 
+@hydra.main(config_path="../conf/embedding/", config_name="embed", version_base=None)
+def run_experiment(cfg: DictConfig) -> None:
+    for task in cfg.tasks:
+        # read the bed file and get the splits : 
+        splits = sequtils.get_splits(cfg[task].bed)
+        for split in splits:
+            for model in cfg.models: 
+                output_dir = f'{cfg.data_dir}/{task}/{model}/'
+                os.makedirs(output_dir, exist_ok=True)
+                # instatiante model
+                embedder = hydra.utils.instantiate(cfg[model])
+                gen = sequtils.embed_from_bed(**cfg[task], embedder = embedder, split = split)
+                # save the embeddings to tfrecords 
+                dataset = dataset_from_iterable(gen)
+                dataset.element_spec
+                dataset_to_tfrecord(dataset, f'{output_dir}/{split}.tfrecord')
 
 
 
 
-def main():
-
-    parser = argparse.ArgumentParser('Compute embeddings')
-    parser.add_argument('bed_file', type=str, help='Path to the bed file')
-    parser.add_argument('out_dir', type=str, help='Path to the output directory')
-    # model can be any of the ones supported by bend.utils.embedders
-    parser.add_argument('model', choices=['nt', 'dnabert', 'awdlstm', 'gpn', 'convnet'], type=str, help='Model architecture for computing embeddings')
-    parser.add_argument('checkpoint', type=str, help='Path to or name of the model checkpoint')
-    parser.add_argument('genome', type=str, help='Path to the reference genome fasta file')
-    parser.add_argument('--extra_context', type=int, default=0, help='Number of extra nucleotides to include on each side of the sequence')
-    parser.add_argument('--kmer', type=int, default=3, help = 'Kmer size for the DNABERT model')
-    
-
-    args = parser.parse_args()
-
-    # get the embedder
-    if args.model == 'nt':
-        embedder = embedders.NucleotideTransformerEmbedder(args.checkpoint)
-    elif args.model == 'dnabert':
-        embedder = embedders.DNABERTEmbedder(args.checkpoint, kmer = args.kmer)
-    elif args.model == 'awdlstm':
-        embedder = embedders.AWDLSTMEmbedder(args.checkpoint)
-    elif args.model == 'gpn':
-        embedder = embedders.GPNEmbedder(args.checkpoint)
-    elif args.model == 'convnet':
-        embedder = embedders.ConvNetEmbedder(args.checkpoint)
-    else:
-        raise ValueError('Model not supported')
-    
-
-    # load the bed file
-    genome_annotation = Annotation(args.bed_file, reference_genome=args.genome)
-
-    # extend the segments if necessary
-    if args.extra_context > 0:
-        genome_annotation.extend_segments(args.extra_context)
-
-
-    # TODO split train, val, test and save separately
-
-
-    for index, row in tqdm(genome_annotation.annotation.iterrows()):
-
-        dna = genome_annotation.get_dna_segment(index = index)
-
-        # compute the embedding
-        embedding = embedder.embed([dna])[0]
-
+if __name__ == '__main__':
+    print('Run experiment')
+    run_experiment()
