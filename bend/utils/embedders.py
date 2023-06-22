@@ -105,19 +105,17 @@ class GPNEmbedder(BaseEmbedder):
 class DNABertEmbedder(BaseEmbedder):
 
     def load_model(self, 
-                   dnabert_path: str = '../../external-models/DNABERT/', 
+                   model_path: str = '../../external-models/DNABERT6/', 
                    kmer: int = 6, ):
-
-        dnabert_path = f'{dnabert_path}/DNABERT{kmer}/'
         # check if path exists
         
-        if not os.path.exists(dnabert_path):
-            print(f'Path {dnabert_path} does not exists, check if the wrong path was given. If not download from https://github.com/jerryji1993/DNABERT')
+        if not os.path.exists(model_path):
+            print(f'Path {model_path} does not exists, check if the wrong path was given. If not download from https://github.com/jerryji1993/DNABERT')
             
 
-        config = BertConfig.from_pretrained(dnabert_path)
-        self.tokenizer = BertTokenizer.from_pretrained(dnabert_path)
-        self.bert_model = BertModel.from_pretrained(dnabert_path, config=config)
+        config = BertConfig.from_pretrained(model_path)
+        self.tokenizer = BertTokenizer.from_pretrained(model_path)
+        self.bert_model = BertModel.from_pretrained(model_path, config=config)
         self.bert_model.to(device)
         self.bert_model.eval()
 
@@ -269,6 +267,85 @@ class ConvNetEmbedder(BaseEmbedder):
 # Class for one-hot encoding.
 categories_4_letters_unknown = ['A', 'C', 'G', 'N', 'T']
 
+class OneHotEmbedder:
+
+    def __init__(self, nucleotide_categories = categories_4_letters_unknown):
+        
+        self.nucleotide_categories = nucleotide_categories
+        
+        self.label_encoder = LabelEncoder().fit(self.nucleotide_categories)
+    
+    def embed(self, sequences: List[str], disable_tqdm: bool = False, return_onehot: bool = False):
+        """Onehot endode sequences"""
+        embeddings = []
+        for s in tqdm(sequences, disable=disable_tqdm):
+            s = self.transform_integer(s, return_onehot = return_onehot)
+            embeddings.append(s)
+        return embeddings
+    
+    def transform_integer(self, sequence : str, return_onehot = False): # integer/onehot encode sequence
+        sequence = np.array(list(sequence))
+        
+        sequence = self.label_encoder.transform(sequence)
+        if return_onehot:
+            sequence = np.eye(len(self.nucleotide_categories))[sequence]
+        return sequence
+        
+    
+
+
+# backward compatibility
+def embed_dnabert(sequences, path: str, kmer: int = 3, disable_tqdm = False):
+    return DNABertEmbedder(path, kmer).embed(sequences, disable_tqdm = disable_tqdm)
+
+def embed_gpn(sequences):
+    return GPNEmbedder().embed(sequences)
+
+def embed_nucleotide_transformer(sequences, model_name):
+    return NucleotideTransformerEmbedder(model_name).embed(sequences)
+
+def embed_awdlstm(sequences, model_path, disable_tqdm = False, **kwargs):
+    return AWDLSTMEmbedder(model_path, **kwargs).embed(sequences, disable_tqdm = disable_tqdm )
+
+def embed_convnet(sequences, model_path, disable_tqdm = False, **kwargs):
+    return ConvNetEmbedder(model_path, **kwargs).embed(sequences, disable_tqdm = disable_tqdm)
+
+'''
+def embed_sequence(sequences : List[str], embedding_type : str = 'categorical', **kwargs):
+
+    if not embedding_type:
+        return sequences
+    
+    if embedding_type == 'categorical' or embedding_type == 'onehot':
+        encode_seq = EncodeSequence() 
+        # embed to categorcal  
+        sequence = []
+        for seq in sequences:
+            sequence.append(torch.tensor(encode_seq.transform_integer(seq)))
+            return sequence
+    # embed with nt transformer:   
+    elif embedding_type == 'nt_transformer':
+        # model name "InstaDeepAI/nucleotide-transformer-2.5b-multi-species"
+        sequences, cls_token = embed_nucleotide_transformer(sequences, **kwargs)
+        return sequences, cls_token
+    # embed with GPN 
+    # embed with DNAbert
+    elif embedding_type == 'dnabert':
+        sequences = embed_dnabert(sequences, disable_tqdm = True, **kwargs)
+        # /z/home/frma/projects/DNA-LM/external-models/DNABERT/DNABERT3/
+        # kmer = 3 
+        return sequences
+    # embed with own models. 
+    elif embedding_type == 'awdlstm':
+        sequences = embed_awdlstm(sequences, disable_tqdm = True, **kwargs)
+        return sequences
+    elif embedding_type == 'convnet':
+        sequences = embed_convnet(sequences, disable_tqdm = True, **kwargs)
+        return sequences
+
+    return sequences
+
+
 class EncodeSequence:
     def __init__(self, nucleotide_categories = categories_4_letters_unknown):
         
@@ -305,54 +382,4 @@ class EncodeSequence:
         return sequence
 
     
-# backward compatibility
-def embed_dnabert(sequences, path: str, kmer: int = 3, disable_tqdm = False):
-    return DNABertEmbedder(path, kmer).embed(sequences, disable_tqdm = disable_tqdm)
-
-def embed_gpn(sequences):
-    return GPNEmbedder().embed(sequences)
-
-def embed_nucleotide_transformer(sequences, model_name):
-    return NucleotideTransformerEmbedder(model_name).embed(sequences)
-
-def embed_awdlstm(sequences, model_path, disable_tqdm = False, **kwargs):
-    return AWDLSTMEmbedder(model_path, **kwargs).embed(sequences, disable_tqdm = disable_tqdm )
-
-def embed_convnet(sequences, model_path, disable_tqdm = False, **kwargs):
-    return ConvNetEmbedder(model_path, **kwargs).embed(sequences, disable_tqdm = disable_tqdm)
-
-def embed_sequence(sequences : List[str], embedding_type : str = 'categorical', **kwargs):
-    '''
-    sequences : list of sequences to embed
-    '''
-    if not embedding_type:
-        return sequences
-    
-    if embedding_type == 'categorical' or embedding_type == 'onehot':
-        encode_seq = EncodeSequence() 
-        # embed to categorcal  
-        sequence = []
-        for seq in sequences:
-            sequence.append(torch.tensor(encode_seq.transform_integer(seq)))
-            return sequence
-    # embed with nt transformer:   
-    elif embedding_type == 'nt_transformer':
-        # model name "InstaDeepAI/nucleotide-transformer-2.5b-multi-species"
-        sequences, cls_token = embed_nucleotide_transformer(sequences, **kwargs)
-        return sequences, cls_token
-    # embed with GPN 
-    # embed with DNAbert
-    elif embedding_type == 'dnabert':
-        sequences = embed_dnabert(sequences, disable_tqdm = True, **kwargs)
-        # /z/home/frma/projects/DNA-LM/external-models/DNABERT/DNABERT3/
-        # kmer = 3 
-        return sequences
-    # embed with own models. 
-    elif embedding_type == 'awdlstm':
-        sequences = embed_awdlstm(sequences, disable_tqdm = True, **kwargs)
-        return sequences
-    elif embedding_type == 'convnet':
-        sequences = embed_convnet(sequences, disable_tqdm = True, **kwargs)
-        return sequences
-
-    return sequences
+'''
