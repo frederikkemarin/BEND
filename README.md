@@ -32,7 +32,18 @@ This script automatically calls the hydra config file at ```/conf/embeddings/emb
 To alter the tasks/model for which to compute the embeddings, please alter the ```tasks``` and/or the ```models``` list in the config file. 
 
 
-If you need to make embeddings for other purposes than preparing downstream task data, [`bend.embedders`](bend/utils/embedders.py) contains wrapper classes around the individual models.
+#### Embedders overview
+
+If you need to make embeddings for other purposes than preparing downstream task data, [`bend.embedders`](bend/utils/embedders.py) contains wrapper classes around the individual models. Each embedder takes a path (or name, if available on HuggingFace) of a checkpoint as the first argument, and provides an `embed` method that takes a list of sequences and returns a list of embeddings.
+
+
+| Embedder | Reference | Models | Info |
+| --- | --- | --- | ---|
+|DNABertEmbedder | [Ji et al.](https://academic.oup.com/bioinformatics/article/37/15/2112/6128680) | [4 different k-mer tokenizations available](https://github.com/jerryji1993/DNABERT#32-download-pre-trained-dnabert)  | has an additional argument `kmer=6` to specify the k-mer size |
+|NucleotideTransformerEmbedder| [Dalla-Torre et al.](https://www.biorxiv.org/content/10.1101/2023.01.11.523679v2) | [4 different models available](https://huggingface.co/InstaDeepAI) | |
+|ConvNetEmbedder| BEND | [1 model available](https://sid.erda.dk/cgi-sid/ls.py?share_id=eXAmVvbRSW&current_dir=pretrained_models&flags=f) | A baseline LM used in BEND.
+|AWDLSTMEmbedder| BEND | [1 model available](https://sid.erda.dk/cgi-sid/ls.py?share_id=eXAmVvbRSW&current_dir=pretrained_models&flags=f) | A baseline LM used in BEND.
+|GPNEmbedder| [Benegas et al.](https://www.biorxiv.org/content/10.1101/2022.08.22.504706v2) | Models trained on [*A. thaliana*](https://huggingface.co/songlab/gpn-arabidopsis) and [Brassicales](https://huggingface.co/songlab/gpn-brassicales) available | This LM was not evaluated in BEND as it was not trained on the human genome. |
 
 
 ### 3. Evaluating models
