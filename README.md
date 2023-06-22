@@ -25,7 +25,7 @@ For training downstream models, it is practical to precompute and save the embed
 Firstly download the desired data from the [data folder](https://sid.erda.dk/cgi-sid/ls.py?share_id=eXAmVvbRSW) and place it in BEND/ (for ease of use maintain the same folder structure). 
 To precompute the embeddings for all models and tasks, run : 
 ```
-python scripts/precompute_embeddings.py. 
+python scripts/precompute_embeddings.py 
 ```
 This script automatically calls the hydra config file at ```/conf/embeddings/embed.yaml```. 
 
