@@ -124,15 +124,16 @@ class DNABertEmbedder(BaseEmbedder):
 
         self.kmer = kmer
 
-    def embed(self, sequences: List[str], disable_tqdm: bool = False, remove_cls_token: bool = True):
+    def embed(self, sequences: List[str], disable_tqdm: bool = False, remove_special_tokens: bool = True):
         embeddings = []
         with torch.no_grad():
             for sequence in tqdm(sequences, disable=disable_tqdm):
                 sequence = [sequence]
                 kmers = self._seq2kmer_batch(sequence, self.kmer)
-                model_input = self.tokenizer.batch_encode_plus(kmers, add_special_tokens=True, 
-                                                               max_length=len(sequence[0]), return_tensors='pt', 
-                                                               padding='max_length')["input_ids"]
+                model_input = self.tokenizer.batch_encode_plus(kmers, 
+                                                               add_special_tokens=True,
+                                                               return_tensors='pt', 
+                                                               )["input_ids"]
 
                 if model_input.shape[1] > 512:
                     model_input = torch.split(model_input, 512, dim=1)
@@ -143,7 +144,7 @@ class DNABertEmbedder(BaseEmbedder):
                 else:
                     output = self.bert_model(model_input.to(device))
                 embedding = output[0].detach().cpu().numpy()
-                embeddings.append(embedding[:,1:] if remove_cls_token else embedding)
+                embeddings.append(embedding[:,1:-1] if remove_special_tokens else embedding)
 
         return embeddings
 
@@ -179,7 +180,7 @@ class NucleotideTransformerEmbedder(BaseEmbedder):
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-    def embed(self, sequences: List[str], disable_tqdm: bool = False, remove_cls_token: bool = True):
+    def embed(self, sequences: List[str], disable_tqdm: bool = False, remove_special_tokens: bool = True):
         '''Tokenizes and embeds sequences. CLS token is removed from the output.'''
         
         cls_tokens = []
@@ -198,7 +199,7 @@ class NucleotideTransformerEmbedder(BaseEmbedder):
                         outs = np.concatenate(outs, axis=1)
                     else:
                         outs = self.model(tokens_ids)['last_hidden_state'].detach().cpu().numpy() # get last hidden state
-                    embedded_seq.append(outs[:,1:] if remove_cls_token else outs)
+                    embedded_seq.append(outs[:,1:] if remove_special_tokens else outs)
                     #print('chunk', n_chunk, 'chunk length', len(chunk), 'tokens length', len(tokens_ids[0]), 'chunk embedded shape', outs.shape)
                 embeddings.append(np.concatenate(embedded_seq, axis=1)) 
 
@@ -286,6 +287,10 @@ class GENALMEmbedder(BaseEmbedder):
         '''
         Note that this model uses byte pair encoding.
         upsample_embedding repeats BPE token embeddings so that each nucleotide has its own embedding.
+        The [CLS] and [SEP] tokens are removed from the output if remove_special_tokens is True.
+
+        The handling of gaps in upsample_embeddings is not tested.
+        The second tokenizer, trained on T2T+1000G SNPs+Multispieces, includes a preprocessing step for long gaps: more than 10 consecutive N are replaced by a single - token.
         '''
         embeddings = [] 
         with torch.no_grad():
@@ -327,6 +332,10 @@ class GENALMEmbedder(BaseEmbedder):
                     embedding = embedding[:,1:-1]
 
                 embeddings.append(embedding)
+
+                #extended token_ids
+                # ext_token_ids = [[x] * len(self.tokenizer.convert_ids_to_tokens([x])[0]) for x in input_ids[0,1:-1]]
+                # ext_token_ids = [item for sublist in ext_token_ids for item in sublist]
 
         return embeddings
 
