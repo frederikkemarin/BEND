@@ -16,7 +16,7 @@ tasks :
   - enhancer_annotation
   - variant_effects
   - histone_modification
-  - chromatin_accesibility
+  - chromatin_accessibility
 # model instatiators 
 dnabert6:
   _target_ : bend.utils.embedders.DNABertEmbedder
@@ -57,7 +57,7 @@ histone_modification:
   reference_fasta : ${data_dir}/genomes/GRCh38.primary_assembly.genome.fa
   read_strand : false
   hdf5_file : null
-chromatin_accesibility:
+chromatin_accessibility:
   bed : samples.DNase-I.512.bed
   reference_fasta : ${data_dir}/genomes/GRCh37.no-chr.fa
   read_strand : false

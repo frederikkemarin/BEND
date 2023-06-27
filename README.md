@@ -53,7 +53,7 @@ If you need to make embeddings for other purposes than preparing downstream task
 It is first required that the above step (computing the embeddings) is completed.
 The embeddings should afterwards be located in `BEND/data/{task_name}/{embedder}/*tfrecords`
 
-To run a runstream task run (from ```BEND/```):
+To run a runstream task run (from `BEND/`):
 ```
 python scripts/train_on_task.py --config-path conf/supervised_tasks/{task_name}/ --config-name {embedder}
 ```
@@ -62,7 +62,7 @@ E.g. to run gene finding on the ResNet-LM embeddings the commandline is then:
 python scripts/train_on_task.py --config-path conf/supervised_tasks/gene_finding/ --config-name resnetlm
 ```
 
-Specifcally for running the enhancer annotation task, to run all 10 cross validation folds, run: 
+Specifically for running the enhancer annotation task, to run all 10 cross validation folds, run: 
 ```
 python scripts/train_on_task.py --config-path conf/supervised_tasks/enhancer_annotation/ --config-name resnetlm --multirun data.cross_validation=1,2,3,4,5,6,7,8,9,10
 ```
@@ -73,7 +73,7 @@ The full list of current task names are :
 - `enhancer_annotation`
 - `variant_effects`
 - `histone_modification`
-- `chromatin_accesibility`
+- `chromatin_accessibility`
 
 And the list of available embedders/models used for training on the tasks are : 
 
@@ -103,7 +103,7 @@ For unsupervised prediction of variant effects, embeddings don't have to be prec
 python3 scripts/predict_variant_effects.py variant_effects.bed {output_file_name}.csv {model_type} {path_to_checkpoint} {path_to_reference_genome_fasta} --embedding_idx {position_of_embedding}
 ```
 
-A notebook with an example of how to run the script and evaluate the results can be found in [examples/unsupervised_variant_effects.ipynb](notebooks/variant_effects.ipynb).
+A notebook with an example of how to run the script and evaluate the results can be found in [examples/unsupervised_variant_effects.ipynb](notebooks/variant_effects.ipynb). To run all models, you can use the script [scripts/run_variant_effects.sh](scripts/run_variant_effects.sh).
 
 ------------
 ## Extending BEND
