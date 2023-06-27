@@ -123,7 +123,7 @@ class DNABertEmbedder(BaseEmbedder):
 
         self.kmer = kmer
 
-    def embed(self, sequences: List[str], disable_tqdm: bool = False):
+    def embed(self, sequences: List[str], disable_tqdm: bool = False, remove_cls_token: bool = True):
         embeddings = []
         with torch.no_grad():
             for sequence in tqdm(sequences, disable=disable_tqdm):
@@ -142,7 +142,7 @@ class DNABertEmbedder(BaseEmbedder):
                 else:
                     output = self.bert_model(model_input.to(device))
                 embedding = output[0].detach().cpu().numpy()
-                embeddings.append(embedding)
+                embeddings.append(embedding[:,1:] if remove_cls_token else embedding)
 
         return embeddings
 
@@ -178,7 +178,7 @@ class NucleotideTransformerEmbedder(BaseEmbedder):
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-    def embed(self, sequences: List[str], disable_tqdm: bool = False, return_cls_token: bool = False):
+    def embed(self, sequences: List[str], disable_tqdm: bool = False, remove_cls_token: bool = True):
         '''Tokenizes and embeds sequences. CLS token is removed from the output.'''
         
         cls_tokens = []
@@ -189,7 +189,6 @@ class NucleotideTransformerEmbedder(BaseEmbedder):
                 #print('sequence', n)
                 s_chunks = [s[chunk : chunk + 5994] for chunk in  range(0, len(s), 5994)] # split into chunks 
                 embedded_seq = []
-                cls_seq = []
                 for n_chunk, chunk in enumerate(s_chunks): # embed each chunk
                     tokens_ids = self.tokenizer(chunk, return_tensors = 'pt')['input_ids'].int().to(device)
                     if len(tokens_ids[0]) > 1000: # too long to fit into the model
@@ -198,13 +197,9 @@ class NucleotideTransformerEmbedder(BaseEmbedder):
                         outs = np.concatenate(outs, axis=1)
                     else:
                         outs = self.model(tokens_ids)['last_hidden_state'].detach().cpu().numpy() # get last hidden state
-                    embedded_seq.append(outs[:,1:])
+                    embedded_seq.append(outs[:,1:] if remove_cls_token else outs)
                     #print('chunk', n_chunk, 'chunk length', len(chunk), 'tokens length', len(tokens_ids[0]), 'chunk embedded shape', outs.shape)
-                    cls_seq.append(outs[:,0])
                 embeddings.append(np.concatenate(embedded_seq, axis=1)) 
-                cls_tokens.append(np.concatenate(cls_seq, axis=0))
-        if return_cls_token:
-            return embeddings, cls_tokens
 
         return embeddings
 
