@@ -124,7 +124,7 @@ class DNABertEmbedder(BaseEmbedder):
 
         self.kmer = kmer
 
-    def embed(self, sequences: List[str], disable_tqdm: bool = False, remove_special_tokens: bool = True):
+    def embed(self, sequences: List[str], disable_tqdm: bool = False, remove_special_tokens: bool = True, upsample_embeddings: bool = False):
         embeddings = []
         with torch.no_grad():
             for sequence in tqdm(sequences, disable=disable_tqdm):
@@ -144,6 +144,10 @@ class DNABertEmbedder(BaseEmbedder):
                 else:
                     output = self.bert_model(model_input.to(device))
                 embedding = output[0].detach().cpu().numpy()
+
+                if upsample_embeddings:
+                    embedding = self._repeat_embedding_vectors(embedding)
+
                 embeddings.append(embedding[:,1:-1] if remove_special_tokens else embedding)
 
         return embeddings
@@ -166,6 +170,45 @@ class DNABertEmbedder(BaseEmbedder):
 
     def _seq2kmer_batch(self, batch, k=3, step_size=1, kmerise=True):
         return list(map(partial(self._seq2kmer, k = k), batch))
+    
+    # repeating.
+    # GATTTATTAGGGGAGATTTTATATATCCCGA
+    # kmer =3, input = 31 --> embedding = 29 --> repeat first and last once.
+    # kmer =3, input = 32 --> embedding = 30 --> repeat first and last once.
+
+    # kmer=4 input = 31 --> embedding = 28 --> repeat first once and last twice.
+    # kmer=4 input = 32 --> embedding = 29
+    # kmer=4 input = 33 --> embedding = 30
+
+    # kmer=5 input = 31 --> embedding = 27 --> repeat first twice and last twice.
+    # kmer=5 input = 32 --> embedding = 28 --> repeat first twice and last twice.
+
+    # kmer=6 input = 31 --> embedding = 26 --> repeat first twice and last three times.
+    def _repeat_embedding_vectors(self, embeddings: np.ndarray, has_special_tokens: bool = True):
+        '''Repeat embeddings at sequence edges to match input length'''
+        if has_special_tokens:
+            cls_vector = embeddings[:, [0]]
+            sep_vector = embeddings[:, [-1]]
+            embeddings = embeddings[:,1:-1]
+
+        # repeat first and last embedding
+        if self.kmer == 3:
+            embeddings = np.concatenate([embeddings[:, [0]], embeddings, embeddings[:, [-1]]], axis=1)
+        elif self.kmer == 4:
+            embeddings = np.concatenate([embeddings[:, [0]], embeddings, embeddings[:, [-1]], embeddings[:, [-1]]], axis=1)
+        elif self.kmer == 5:
+            embeddings = np.concatenate([embeddings[:, [0]], embeddings, embeddings[:, [0]], embeddings[:, [-1]], embeddings[:, [-1]]], axis=1)
+        elif self.kmer == 6:
+            embeddings = np.concatenate([embeddings[:, [0]], embeddings, embeddings[:, [0]], embeddings[:, [-1]], embeddings[:, [-1]], embeddings[:, [-1]]], axis=1)
+        
+        if has_special_tokens:
+            embeddings = np.concatenate([cls_vector, embeddings, sep_vector], axis=1)
+
+        return embeddings
+
+
+
+
 
 
 class NucleotideTransformerEmbedder(BaseEmbedder):
