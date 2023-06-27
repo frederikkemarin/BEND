@@ -22,7 +22,6 @@ def main():
     parser.add_argument('--extra_context', type=int, default=256, help='Number of extra nucleotides to include on each side of the sequence')
     parser.add_argument('--kmer', type=int, default=3, help = 'Kmer size for the DNABERT model')
     parser.add_argument('--embedding_idx', type=int, default=0, help = 'Index of the embedding to use for computing the distance')
-    # 512: 43 for NT, 254 for DNABERT6, 256 for AWDLSTM and ConvNet
 
     args = parser.parse_args()
 
@@ -50,7 +49,7 @@ def main():
 
     genome_annotation.annotation['distance'] = None
 
-    for index, row in genome_annotation.annotation.iterrows():
+    for index, row in tqdm(genome_annotation.annotation.iterrows()):
 
 
         # middle_point = row['start'] + 256
@@ -60,7 +59,7 @@ def main():
         dna_alt[len(dna_alt)//2] = row['alt']
         dna_alt = ''.join(dna_alt)
 
-        embedding_wt, embedding_alt = embedder.embed([dna, dna_alt])
+        embedding_wt, embedding_alt = embedder.embed([dna, dna_alt], disable_tqdm=True)
         d = spatial.distance.cosine(embedding_alt[0, args.embedding_idx], embedding_wt[0, args.embedding_idx])
         genome_annotation.annotation.loc[index, 'distance'] = d
 
