@@ -1,6 +1,7 @@
 # 🧬 BEND  - **Ben**chmarking **D**NA Language Models on Biologically Meaningful Tasks
 
 ![Stars](https://img.shields.io/github/stars/frederikkemarin/BEND?logo=GitHub&color=yellow)
+[![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
 Data is available at https://sid.erda.dk/cgi-sid/ls.py?share_id=eXAmVvbRSW
 
@@ -44,6 +45,7 @@ If you need to make embeddings for other purposes than preparing downstream task
 |ConvNetEmbedder| BEND | [1 model available](https://sid.erda.dk/cgi-sid/ls.py?share_id=eXAmVvbRSW&current_dir=pretrained_models&flags=f) | A baseline LM used in BEND.
 |AWDLSTMEmbedder| BEND | [1 model available](https://sid.erda.dk/cgi-sid/ls.py?share_id=eXAmVvbRSW&current_dir=pretrained_models&flags=f) | A baseline LM used in BEND.
 |GPNEmbedder| [Benegas et al.](https://www.biorxiv.org/content/10.1101/2022.08.22.504706v2) | Models trained on [*A. thaliana*](https://huggingface.co/songlab/gpn-arabidopsis) and [Brassicales](https://huggingface.co/songlab/gpn-brassicales) available | This LM was not evaluated in BEND as it was not trained on the human genome. |
+|GENALMEmbedder | [Fishman et al.](https://www.biorxiv.org/content/10.1101/2023.06.12.544594v1) |[8 different models available](https://huggingface.co/AIRI-Institute) |`embed_sequences` has an additional argument `upsample_embeddings=True` to dynamically repeat BPE token vectors back to the original sequence length. |
 
 
 ### 3. Evaluating models
