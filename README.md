@@ -36,24 +36,36 @@ To alter the tasks/model for which to compute the embeddings, please alter the `
 #### Embedders overview
 
 If you need to make embeddings for other purposes than preparing downstream task data, [`bend.embedders`](bend/utils/embedders.py) contains wrapper classes around the individual models. Each embedder takes a path (or name, if available on HuggingFace) of a checkpoint as the first argument, and provides an `embed()` method that takes a list of sequences and returns a list of embeddings.   
-Embedders have a default-true argument `remove_special_tokens=True` in `embed()` that removes any `[CLS]`, `[SEP]` tokens from the returned embeddings.
-
+Embedders have a default-true argument `remove_special_tokens=True` in `embed()` that removes any `[CLS]`, `[SEP]` tokens from the returned embeddings. For models that return less embedding vectors than their number of input nucleotides, [embeddings can be upsampled](#how-are-embeddings-upsampled) to the original input sequence length using the `upsample_embeddings=True` argument in `embed()`. 
 
 | Embedder | Reference | Models | Info |
 | --- | --- | --- | ---|
-|DNABertEmbedder | [Ji et al.](https://academic.oup.com/bioinformatics/article/37/15/2112/6128680) | [4 different k-mer tokenizations available](https://github.com/jerryji1993/DNABERT#32-download-pre-trained-dnabert)  | has an additional argument `kmer=6` to specify the k-mer size |
+|DNABertEmbedder | [Ji et al.](https://academic.oup.com/bioinformatics/article/37/15/2112/6128680) | [4 different k-mer tokenizations available](https://github.com/jerryji1993/DNABERT#32-download-pre-trained-dnabert)  | has an additional argument `kmer=6` to specify the k-mer size.|
 |NucleotideTransformerEmbedder| [Dalla-Torre et al.](https://www.biorxiv.org/content/10.1101/2023.01.11.523679v2) | [4 different models available](https://huggingface.co/InstaDeepAI) | |
 |ConvNetEmbedder| BEND | [1 model available](https://sid.erda.dk/cgi-sid/ls.py?share_id=eXAmVvbRSW&current_dir=pretrained_models&flags=f) | A baseline LM used in BEND.
 |AWDLSTMEmbedder| BEND | [1 model available](https://sid.erda.dk/cgi-sid/ls.py?share_id=eXAmVvbRSW&current_dir=pretrained_models&flags=f) | A baseline LM used in BEND.
 |GPNEmbedder| [Benegas et al.](https://www.biorxiv.org/content/10.1101/2022.08.22.504706v2) | Models trained on [*A. thaliana*](https://huggingface.co/songlab/gpn-arabidopsis) and [Brassicales](https://huggingface.co/songlab/gpn-brassicales) available | This LM was not evaluated in BEND as it was not trained on the human genome. |
-|GENALMEmbedder | [Fishman et al.](https://www.biorxiv.org/content/10.1101/2023.06.12.544594v1) |[8 different models available](https://huggingface.co/AIRI-Institute) |`embed_sequences` has an additional argument `upsample_embeddings=True` to dynamically repeat BPE token vectors back to the original sequence length. |
+|GENALMEmbedder | [Fishman et al.](https://www.biorxiv.org/content/10.1101/2023.06.12.544594v1) |[8 different models available](https://huggingface.co/AIRI-Institute) | |
+
+All embedders can be used as follows:
+```python
+from bend.embedders import NucleotideTransformerEmbedder
+
+# load the embedder with a valid checkpoint name or path
+embedder = NucleotideTransformerEmbedder('InstaDeepAI/nucleotide-transformer-2.5b-multi-species')
+
+# embed a list of sequences
+embeddings = embedder.embed(['AGGATGCCGAGAGTATATGGGA', 'CCCAACCGAGAGTATATGTTAT'])
+# or just call directly to embed a single sequence
+embedding = embedder('AGGATGCCGAGAGTATATGGGA') 
+```
 
 
 ### 3. Evaluating models
 
 #### Training supervised models
 
-It is first required that the above step (computing the embeddings) is completed.
+It is first required that the [above step (computing the embeddings)](#2-computing-embeddings) is completed.
 The embeddings should afterwards be located in `BEND/data/{task_name}/{embedder}/*tfrecords`
 
 To run a runstream task run (from `BEND/`):
@@ -243,3 +255,15 @@ DeepSEA's data was sourced from [GRASP](https://grasp.nhlbi.nih.gov/Overview.asp
 	author = {Zhou, Jian and Troyanskaya, Olga G},
 	year = {2015},
     }
+
+
+## FAQ
+
+### How are embeddings upsampled?
+Due to tokenization strategies, some models by default return less embedding vectors than their number of input nucleotides. As we still require nucleotide-level input for nucleotide-level prediction tasks, we implement upsampling strategies to match the number of returned embeddings to the number of input nucleotides.
+
+Model | Upsampling strategy
+--- | ---
+DNABert | The overlapping k-mer tokenization strategy of DNABert causes some "missing embeddings" at the start and the end of the input sequence, as there is no context to build the k-mer tokens from. For `k=3`, we repeat the first and the last embedding vectors once. For `k=4`, we repeat the first once and the last twice. For `k=5`, we repeat the first and the last twice. For `k=6`, we repeat the first twice and the last three times. 
+Nucleotide Transformer | Due to 6-mer tokenization, each embedding is repeated 6 times. Remainder tokens are single nucleotides and left as-is.
+GENA-LM | BPE tokens have variable length. We repeat each embedding vector to the length of the sequence represented by its token.

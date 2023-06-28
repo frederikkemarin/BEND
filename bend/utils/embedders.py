@@ -223,8 +223,8 @@ class NucleotideTransformerEmbedder(BaseEmbedder):
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-    def embed(self, sequences: List[str], disable_tqdm: bool = False, remove_special_tokens: bool = True):
-        '''Tokenizes and embeds sequences. CLS token is removed from the output.'''
+    def embed(self, sequences: List[str], disable_tqdm: bool = False, remove_special_tokens: bool = True, upsample_embeddings: bool = False):
+        '''Tokenizes and embeds sequences. CLS token is removed from the output if remove_special_tokens=True.'''
         
         cls_tokens = []
         embeddings = []
@@ -242,11 +242,34 @@ class NucleotideTransformerEmbedder(BaseEmbedder):
                         outs = np.concatenate(outs, axis=1)
                     else:
                         outs = self.model(tokens_ids)['last_hidden_state'].detach().cpu().numpy() # get last hidden state
+
+                    if upsample_embeddings:
+                        outs = self._repeat_embedding_vectors(self.tokenizer.convert_ids_to_tokens(tokens_ids[0]), outs)
                     embedded_seq.append(outs[:,1:] if remove_special_tokens else outs)
                     #print('chunk', n_chunk, 'chunk length', len(chunk), 'tokens length', len(tokens_ids[0]), 'chunk embedded shape', outs.shape)
                 embeddings.append(np.concatenate(embedded_seq, axis=1)) 
 
         return embeddings
+    
+    @staticmethod
+    def _repeat_embedding_vectors(tokens: Iterable[str], embeddings: np.ndarray, has_special_tokens: bool = True):
+        '''
+        Nucleotide transformer uses 6-mer embedding, but single-embedding for remaining nucleotides.
+        '''
+        assert len(tokens) == embeddings.shape[1], 'Number of tokens and embeddings must match.'
+        new_embeddings = []
+        for idx, token in enumerate(tokens):
+
+            if has_special_tokens and idx == 0:
+                new_embeddings.append(embeddings[:, [idx]]) # (1, hidden_dim)
+                continue
+            token_embedding = embeddings[:, [idx]] # (1, hidden_dim)
+            new_embeddings.extend([token_embedding] * len(token))
+
+        # list of (1,1, 768) arrays
+        new_embeddings = np.concatenate(new_embeddings, axis=1)
+        return new_embeddings
+
 
 
 class AWDLSTMEmbedder(BaseEmbedder):
