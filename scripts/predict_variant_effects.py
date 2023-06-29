@@ -16,16 +16,16 @@ def main():
     parser.add_argument('bed_file', type=str, help='Path to the bed file')
     parser.add_argument('out_file', type=str, help='Path to the output file')
     # model can be any of the ones supported by bend.utils.embedders
-    parser.add_argument('model', choices=['nt', 'dnabert', 'awdlstm', 'gpn', 'convnet'], type=str, help='Model architecture for computing embeddings')
+    parser.add_argument('model', choices=['nt', 'dnabert', 'awdlstm', 'gpn', 'convnet', 'genalm'], type=str, help='Model architecture for computing embeddings')
     parser.add_argument('checkpoint', type=str, help='Path to or name of the model checkpoint')
     parser.add_argument('genome', type=str, help='Path to the reference genome fasta file')
     parser.add_argument('--extra_context', type=int, default=256, help='Number of extra nucleotides to include on each side of the sequence')
     parser.add_argument('--kmer', type=int, default=3, help = 'Kmer size for the DNABERT model')
     parser.add_argument('--embedding_idx', type=int, default=0, help = 'Index of the embedding to use for computing the distance')
-    # 512: 43 for NT, 254 for DNABERT6, 256 for AWDLSTM and ConvNet
 
     args = parser.parse_args()
 
+    kwargs = {'disable_tqdm': True}
     # get the embedder
     if args.model == 'nt':
          embedder = embedders.NucleotideTransformerEmbedder(args.checkpoint)
@@ -37,6 +37,10 @@ def main():
         embedder = embedders.GPNEmbedder(args.checkpoint)
     elif args.model == 'convnet':
         embedder = embedders.ConvNetEmbedder(args.checkpoint)
+    elif args.model == 'genalm':
+        embedder = embedders.GENALMEmbedder(args.checkpoint)
+        kwargs['upsample_embeddings'] = True # each nucleotide has an embedding
+        
     else:
         raise ValueError('Model not supported')
     
@@ -50,7 +54,7 @@ def main():
 
     genome_annotation.annotation['distance'] = None
 
-    for index, row in genome_annotation.annotation.iterrows():
+    for index, row in tqdm(genome_annotation.annotation.iterrows()):
 
 
         # middle_point = row['start'] + 256
@@ -60,7 +64,7 @@ def main():
         dna_alt[len(dna_alt)//2] = row['alt']
         dna_alt = ''.join(dna_alt)
 
-        embedding_wt, embedding_alt = embedder.embed([dna, dna_alt])
+        embedding_wt, embedding_alt = embedder.embed([dna, dna_alt], **kwargs)
         d = spatial.distance.cosine(embedding_alt[0, args.embedding_idx], embedding_wt[0, args.embedding_idx])
         genome_annotation.annotation.loc[index, 'distance'] = d
 
