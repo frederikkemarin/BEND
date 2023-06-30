@@ -64,7 +64,6 @@ embedding = embedder('AGGATGCCGAGAGTATATGGGA')
 from bend.embedders import HyenaDNAEmbedder
 embedder = HyenaDNAEmbedder('pretrained_models/hyenadna/hyenadna-tiny-1k-seqlen')
 ```
-```
 
 
 ### 3. Evaluating models
