@@ -16,7 +16,7 @@ def main():
     parser.add_argument('bed_file', type=str, help='Path to the bed file')
     parser.add_argument('out_file', type=str, help='Path to the output file')
     # model can be any of the ones supported by bend.utils.embedders
-    parser.add_argument('model', choices=['nt', 'dnabert', 'awdlstm', 'gpn', 'convnet', 'genalm'], type=str, help='Model architecture for computing embeddings')
+    parser.add_argument('model', choices=['nt', 'dnabert', 'awdlstm', 'gpn', 'convnet', 'genalm', 'hyenadna'], type=str, help='Model architecture for computing embeddings')
     parser.add_argument('checkpoint', type=str, help='Path to or name of the model checkpoint')
     parser.add_argument('genome', type=str, help='Path to the reference genome fasta file')
     parser.add_argument('--extra_context', type=int, default=256, help='Number of extra nucleotides to include on each side of the sequence')
@@ -24,6 +24,9 @@ def main():
     parser.add_argument('--embedding_idx', type=int, default=0, help = 'Index of the embedding to use for computing the distance')
 
     args = parser.parse_args()
+
+    extra_context_left = args.extra_context
+    extra_context_right = args.extra_context
 
     kwargs = {'disable_tqdm': True}
     # get the embedder
@@ -40,7 +43,11 @@ def main():
     elif args.model == 'genalm':
         embedder = embedders.GENALMEmbedder(args.checkpoint)
         kwargs['upsample_embeddings'] = True # each nucleotide has an embedding
-        
+    elif args.model == 'hyenadna':
+        embedder = embedders.HyenaDNAEmbedder(args.checkpoint)
+        # autogressive model. No use for right context.
+        extra_context_left = args.extra_context
+        extra_context_right = 0
     else:
         raise ValueError('Model not supported')
     
@@ -50,7 +57,7 @@ def main():
 
     # extend the segments if necessary
     if args.extra_context > 0:
-        genome_annotation.extend_segments(args.extra_context)
+        genome_annotation.extend_segments(extra_context_left=extra_context_left, extra_context_right=extra_context_right)
 
     genome_annotation.annotation['distance'] = None
 
@@ -61,7 +68,14 @@ def main():
         # index the right embedding with dna[len(dna)//2]
         dna = genome_annotation.get_dna_segment(index = index)
         dna_alt = [x for x in dna]
-        dna_alt[len(dna_alt)//2] = row['alt']
+        if extra_context_left == extra_context_right:
+            dna_alt[len(dna_alt)//2] = row['alt']
+        elif extra_context_right == 0:
+            dna_alt[-1] = row['alt']
+        elif extra_context_left == 0:
+            dna_alt[0] = row['alt']
+        else:
+            raise ValueError('Not implemented')
         dna_alt = ''.join(dna_alt)
 
         embedding_wt, embedding_alt = embedder.embed([dna, dna_alt], **kwargs)

@@ -30,10 +30,17 @@ class Annotation:
             self.genome_dict = SeqIO.to_dict(SeqIO.parse(reference_genome, "fasta"))
 
     
-    def extend_segments(self, extra_context: int = 0):
+    def extend_segments(self, extra_context_left: int = None, extra_context_right: int = None, extra_context: int = None):
         '''Modify the annotation to include extra context on both sides of the segments'''
-        self.annotation.loc[:, 'start'] = self.annotation.loc[:, 'start'] - extra_context
-        self.annotation.loc[:, 'end'] = self.annotation.loc[:, 'end'] + extra_context
+
+        if extra_context is not None:
+            if extra_context_right is not None or extra_context_left is not None:
+                raise ValueError('extra_context cannot be used with extra_context_left or extra_context_right')
+            extra_context_left = extra_context
+            extra_context_right = extra_context
+
+        self.annotation.loc[:, 'start'] = self.annotation.loc[:, 'start'] - extra_context_left
+        self.annotation.loc[:, 'end'] = self.annotation.loc[:, 'end'] + extra_context_right
             
     
     def get_item(self, index) :
