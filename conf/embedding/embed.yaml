@@ -21,6 +21,7 @@ tasks :
 dnabert6:
   _target_ : bend.utils.embedders.DNABertEmbedder
   model_path : ${embedders_dir}/dnabert6
+  kmer : 6
 resnetlm : 
   _target_ : bend.utils.embedders.ConvNetEmbedder
   model_path : ${embedders_dir}/resnetlm/
@@ -37,7 +38,7 @@ nt_transformer_1000g:
   _target_ : bend.utils.embedders.NucleotideTransformerEmbedder
   model_name : InstaDeepAI/nucleotide-transformer-2.5b-1000g
 onehot:
-  _target_ : bed.utils.embedders.OneHotEmbedder
+  _target_ : bend.utils.embedders.OneHotEmbedder
 # data configurations for each task
 gene_finding:
   reference_fasta : ${data_dir}/genomes/GRCh38.primary_assembly.genome.fa
