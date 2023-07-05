@@ -621,6 +621,31 @@ class DNABert2Embedder(BaseEmbedder):
 # Class for one-hot encoding.
 categories_4_letters_unknown = ['A', 'C', 'G', 'N', 'T']
 
+class OneHotEmbedder(BaseEmbedder):
+
+    def __init__(self, nucleotide_categories = categories_4_letters_unknown):
+        
+        self.nucleotide_categories = nucleotide_categories
+        
+        self.label_encoder = LabelEncoder().fit(self.nucleotide_categories)
+    
+    def embed(self, sequences: List[str], disable_tqdm: bool = False, return_onehot: bool = False):
+        """Onehot endode sequences"""
+        embeddings = []
+        for s in tqdm(sequences, disable=disable_tqdm):
+            s = self.transform_integer(s, return_onehot = return_onehot)
+            embeddings.append(s)
+        return embeddings
+    
+    def transform_integer(self, sequence : str, return_onehot = False): # integer/onehot encode sequence
+        sequence = np.array(list(sequence))
+        
+        sequence = self.label_encoder.transform(sequence)
+        if return_onehot:
+            sequence = np.eye(len(self.nucleotide_categories))[sequence]
+        return sequence
+        
+
 class EncodeSequence:
     def __init__(self, nucleotide_categories = categories_4_letters_unknown):
         
