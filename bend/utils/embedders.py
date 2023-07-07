@@ -37,6 +37,7 @@ from bend.models.awd_lstm import AWDLSTMModelForInference
 from bend.models.dilated_cnn import ConvNetModel
 from bend.models.gena_lm import BertModel as GenaLMBertModel
 from bend.models.hyena_dna import HyenaDNAPreTrainedModel, CharacterTokenizer
+from bend.models.dnabert2 import BertModel as DNABert2BertModel
 from bend.utils.download import download_model
 
 from tqdm.auto import tqdm
@@ -468,7 +469,7 @@ class HyenaDNAEmbedder(BaseEmbedder):
         # otherwise we'll load the HF one in None
         backbone_cfg = None
 
-
+        is_git_lfs_repo = os.path.exists('.git/hooks/pre-push')
 
         # use the pretrained Huggingface wrapper instead
         model = HyenaDNAPreTrainedModel.from_pretrained(
@@ -483,6 +484,11 @@ class HyenaDNAEmbedder(BaseEmbedder):
 
         model.to(device)
         self.model = model
+
+        # NOTE the git lfs download command will add this,
+        # but we actually dont use LFS for BEND itself.
+        if not is_git_lfs_repo:
+            os.remove('.git/hooks/pre-push')
 
 
 
@@ -525,6 +531,90 @@ class HyenaDNAEmbedder(BaseEmbedder):
 
     # print(embeddings.shape)  # embeddings here!
 
+
+class DNABert2Embedder(BaseEmbedder):
+    '''https://arxiv.org/pdf/2306.15006.pdf'''
+    def load_model(self, model_path = "zhihan1996/DNABERT-2-117M", **kwargs):
+
+
+        # keep the source in this repo to avoid using flash attn. 
+        self.model = DNABert2BertModel.from_pretrained(model_path)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
+        self.model.eval()
+        self.model.to(device)
+
+        # https://github.com/Zhihan1996/DNABERT_2/issues/2
+        self.max_length = 10000 #nucleotides.
+
+
+    def embed(self, sequences: List[str], disable_tqdm: bool = False, remove_special_tokens: bool = True, upsample_embeddings: bool = False):
+        '''
+        Note that this model uses byte pair encoding.
+        upsample_embedding repeats BPE token embeddings so that each nucleotide has its own embedding.
+        The [CLS] and [SEP] tokens are removed from the output if remove_special_tokens is True.
+        '''
+        embeddings = []
+        with torch.no_grad():
+            for sequence in tqdm(sequences, disable=disable_tqdm):
+
+                chunks = [sequence[chunk : chunk + self.max_length] for chunk in  range(0, len(sequence), self.max_length)] # split into chunks
+
+                embedded_chunks = []
+                for n_chunk, chunk in enumerate(chunks):
+                    print(n_chunk)
+
+                    input_ids = self.tokenizer(chunk, return_tensors="pt", return_attention_mask=False, return_token_type_ids=False)["input_ids"]
+                    print(input_ids.shape)
+                    output = self.model(input_ids.to(device))[0].detach().cpu().numpy()
+
+                    if upsample_embeddings:
+                        output = self._repeat_embedding_vectors(self.tokenizer.convert_ids_to_tokens(input_ids[0]), output)
+
+                    # for intermediate chunks the special tokens need to go.
+                    # if we only have 1 chunk, keep them for now.
+                    if len(chunks) != 1:
+                        if n_chunk == 0:
+                            output = output[:,:-1] # no SEP
+                        elif n_chunk == len(chunks) - 1:
+                            output = output[:,1:] # no CLS
+                        else:
+                            output = output[:,1:-1] # no CLS and no SEP
+
+                    embedded_chunks.append(output)
+
+                embedding = np.concatenate(embedded_chunks, axis=1)
+
+                if remove_special_tokens:
+                    embedding = embedding[:,1:-1]
+
+                embeddings.append(embedding)
+
+
+        return embeddings
+    
+    
+
+    # GATTTATTAGGGGAGATTTTATATATCCCGA
+    # ['[CLS]', 'G', 'ATTTATT', 'AGGGG', 'AGATT', 'TTATAT', 'ATCCCG', 'A', '[SEP]']
+    @staticmethod
+    def _repeat_embedding_vectors(tokens: Iterable[str], embeddings: np.ndarray, has_special_tokens: bool = True):
+        '''
+        Byte-pair encoding merges a variable number of letters into one token.
+        We need to repeat each token's embedding vector for each letter in the token.
+        '''
+        assert len(tokens) == embeddings.shape[1], 'Number of tokens and embeddings must match.'
+        new_embeddings = []
+        for idx, token in enumerate(tokens):
+
+            if has_special_tokens and (idx == 0 or idx == len(tokens) - 1):
+                new_embeddings.append(embeddings[:, [idx]]) # (1, 768)
+                continue
+            token_embedding = embeddings[:, [idx]] # (1, 768)
+            new_embeddings.extend([token_embedding] * len(token))
+
+        # list of (1,1, 768) arrays
+        new_embeddings = np.concatenate(new_embeddings, axis=1)
+        return new_embeddings
 
 
 
