@@ -47,6 +47,7 @@ Embedders have a default-true argument `remove_special_tokens=True` in `embed()`
 |GPNEmbedder| [Benegas et al.](https://www.biorxiv.org/content/10.1101/2022.08.22.504706v2) | Models trained on [*A. thaliana*](https://huggingface.co/songlab/gpn-arabidopsis) and [Brassicales](https://huggingface.co/songlab/gpn-brassicales) available | This LM was not evaluated in BEND as it was not trained on the human genome. |
 |GENALMEmbedder | [Fishman et al.](https://www.biorxiv.org/content/10.1101/2023.06.12.544594v1) |[8 different models available](https://huggingface.co/AIRI-Institute) | |
 |HyenaDNAEmbedder | [Nguyen et al.](https://arxiv.org/abs/2306.15794) | [5 different models available](https://huggingface.co/LongSafari) | Experimental integration. Requires Git LFS to be installed to automatically download checkpoints. Instead of the HF checkpoint name, the argument when instantiating needs to be of the format `path/to/save/checkpoints/checkpoint_name` |
+|DNABert2Embedder | [Zhou et al.](https://arxiv.org/pdf/2306.15006v1.pdf) | [1 model available](https://huggingface.co/zhihan1996/DNABERT-2-117M) | |
 
 All embedders can be used as follows:
 ```python
@@ -63,7 +64,6 @@ embedding = embedder('AGGATGCCGAGAGTATATGGGA')
 # This requires git LFS and will automatically download the checkpoint, if not already present
 from bend.embedders import HyenaDNAEmbedder
 embedder = HyenaDNAEmbedder('pretrained_models/hyenadna/hyenadna-tiny-1k-seqlen')
-```
 ```
 
 
