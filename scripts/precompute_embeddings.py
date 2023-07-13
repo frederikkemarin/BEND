@@ -13,8 +13,9 @@ def run_experiment(cfg: DictConfig) -> None:
     for task in cfg.tasks:
         # read the bed file and get the splits : 
         splits = sequtils.get_splits(cfg[task].bed)
-        for split in splits:
-            for model in cfg.models: 
+        for model in cfg.models:
+            print('Embedding with', model) 
+            for split in splits:
                 output_dir = f'{cfg.data_dir}/{task}/{model}/'
                 os.makedirs(output_dir, exist_ok=True)
                 # instatiante model
