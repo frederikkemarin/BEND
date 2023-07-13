@@ -4,14 +4,15 @@ hydra :
 data_dir : /z/datasets/ds_er_etl/frma/data/
 embedders_dir : ./pretrained_models/
 models : 
-  #- gena_lm 
-  - hyenadna
+  #- gena-lm-bigbird-base-t2t
+  - gena-lm-bert-large-t2
+  #- hyenadna-large-1m
   #- dnabert6
   #- resnetlm
   #- awdlstm
   #- nt_transformer_ms
   #- nt_transformer_human_ref
-  #- nt_transformer_1000g
+  - nt_transformer_1000g
   #- onehot
 tasks : 
   - gene_finding
@@ -24,10 +25,13 @@ dnabert6:
   _target_ : bend.utils.embedders.DNABertEmbedder
   model_path : ${embedders_dir}/dnabert6
   kmer : 6
-gena_lm:
+gena-lm-bigbird-base-t2t:
   _target_ : bend.utils.embedders.GENALMEmbedder
-  model_path : AIRI-Institute/gena-lm-bigbird-base-t2t # AIRI-Institute/gena-lm-bert-large-t2t
-hyenadna:
+  model_path : AIRI-Institute/gena-lm-bigbird-base-t2t
+gena-lm-bert-large-t2:
+  _target_ : bend.utils.embedders.GENALMEmbedder
+  model_path : AIRI-Institute/gena-lm-bert-large-t2t 
+hyenadna-large-1m:
   _target_ : bend.utils.embedders.HyenaDNAEmbedder
   model_path : ${embedders_dir}/hyenadna/hyenadna-large-1m-seqlen
 resnetlm : 
