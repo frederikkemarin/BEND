@@ -443,7 +443,6 @@ class HyenaDNAEmbedder(BaseEmbedder):
 
         # you only need to select which model to use here, we'll do the rest!
         checkpoint_path, model_name = os.path.split(model_path)
-
         max_lengths = {
             'hyenadna-tiny-1k-seqlen': 1024,
             'hyenadna-small-32k-seqlen': 32768,
