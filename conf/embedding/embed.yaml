@@ -5,7 +5,7 @@ data_dir : /z/datasets/ds_er_etl/frma/data/
 embedders_dir : ./pretrained_models/
 models : 
   #- gena-lm-bigbird-base-t2t
-  - gena-lm-bert-large-t2
+  #- gena-lm-bert-large-t2
   #- hyenadna-large-1m
   #- dnabert6
   #- resnetlm
@@ -13,6 +13,7 @@ models :
   #- nt_transformer_ms
   #- nt_transformer_human_ref
   - nt_transformer_1000g
+  - dnabert2
   #- onehot
 tasks : 
   - gene_finding
@@ -21,6 +22,9 @@ tasks :
   #- histone_modification
   #- chromatin_accessibility
 # model instatiators 
+dnabert2:
+  _target_ : bend.utils.embedders.DNABert2Embedder
+  model_path : ${embedders_dir}/dnabert2
 dnabert6:
   _target_ : bend.utils.embedders.DNABertEmbedder
   model_path : ${embedders_dir}/dnabert6
