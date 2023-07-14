@@ -53,13 +53,15 @@ def embed_from_multilabled_bed_gen(bed, reference_fasta, embedder, label_column_
             sequence = fasta.fetch(chrom, start, end, strand)
 
             # embed sequence and multi-hot encode labels
-            sequence_emebd = tf.squeeze(tf.constant(embedder(sequence)))
+            sequence_embed = tf.squeeze(tf.constant(embedder(sequence)))
             labels_multi_hot = multi_hot(labels, depth=label_depth)
 
-            yield {'inputs': sequence_emebd, 'outputs': labels_multi_hot}
+            yield {'inputs': sequence_embed, 'outputs': labels_multi_hot}
 
 
-def embed_from_bed(bed, reference_fasta, embedder, hdf5_file= None, read_strand = False, read_reverse = False, label_column_idx=6, label_depth=None, split = None):
+def embed_from_bed(bed, reference_fasta, embedder, upsample_embeddings = False, 
+                  hdf5_file= None, read_strand = False, 
+                  read_reverse = False, label_column_idx=6, label_depth=None, split = None):
     fasta = Fasta(reference_fasta)
     # open hdf5 file 
     hdf5_file = h5py.File(hdf5_file, mode = "r")
@@ -84,7 +86,7 @@ def embed_from_bed(bed, reference_fasta, embedder, hdf5_file= None, read_strand 
         # get sequence
         sequence = fasta.fetch(chrom, start, end, strand = strand, reverse = reverse) # categorical labels
         # embed sequence
-        sequence_embed = tf.squeeze(tf.constant(embedder(sequence)))
+        sequence_embed = tf.squeeze(tf.constant(embedder(sequence, upsample_embeddings = upsample_embeddings)))
         yield {'inputs': sequence_embed, 'outputs': labels}
 
 
