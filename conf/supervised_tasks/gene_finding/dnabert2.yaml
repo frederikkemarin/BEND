@@ -3,7 +3,7 @@ defaults:
   - _self_
 hydra : 
   searchpath:
-    #- pkg://conf
+    - pkg://conf
     - file://conf 
 task : gene_finding 
 embedder : dnabert2
@@ -14,14 +14,14 @@ model:
   output_size: ${datadims.${task}}
   hidden_size: 64
   kernel_size: 3
-  upsample_factor: 6
 optimizer : 
   _target_ : torch.optim.AdamW 
   lr : 0.003
   weight_decay: 0.01
 data:
   _target_: bend.utils.data_downstream.get_data
-  data_dir : ./data/${task}/${embedder}/
+  dir : /z/datasets/ds_er_etl/frma/data
+  data_dir : ${data.dir}/${task}/${embedder}/
   cross_validation : false
   batch_size : 64
   num_workers : 0
