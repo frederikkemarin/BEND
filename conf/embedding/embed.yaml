@@ -6,14 +6,18 @@ embedders_dir : ./pretrained_models/
 models : 
   #- gena-lm-bigbird-base-t2t
   #- gena-lm-bert-large-t2
+  #- hyenadna-tiny-1k
+  #- hyenadna-small-32k
+  #- hyenadna-medium-160k
+  #- hyenadna-medium-450k
   #- hyenadna-large-1m
   #- dnabert6
   #- resnetlm
   #- awdlstm
   #- nt_transformer_ms
   #- nt_transformer_human_ref
-  - nt_transformer_1000g
-  - dnabert2
+  #- nt_transformer_1000g
+  #- dnabert2
   #- onehot
 tasks : 
   - gene_finding
@@ -24,7 +28,8 @@ tasks :
 # model instatiators 
 dnabert2:
   _target_ : bend.utils.embedders.DNABert2Embedder
-  model_path : ${embedders_dir}/dnabert2
+  model_path : zhihan1996/DNABERT-2-117M
+  upsample_embeddings : true
 dnabert6:
   _target_ : bend.utils.embedders.DNABertEmbedder
   model_path : ${embedders_dir}/dnabert6
@@ -32,12 +37,26 @@ dnabert6:
 gena-lm-bigbird-base-t2t:
   _target_ : bend.utils.embedders.GENALMEmbedder
   model_path : AIRI-Institute/gena-lm-bigbird-base-t2t
+  upsample_embeddings : true
 gena-lm-bert-large-t2:
   _target_ : bend.utils.embedders.GENALMEmbedder
   model_path : AIRI-Institute/gena-lm-bert-large-t2t 
+  upsample_embeddings : true
 hyenadna-large-1m:
   _target_ : bend.utils.embedders.HyenaDNAEmbedder
   model_path : ${embedders_dir}/hyenadna/hyenadna-large-1m-seqlen
+hyenadna-tiny-1k:
+  _target_ : bend.utils.embedders.HyenaDNAEmbedder
+  model_path : ${embedders_dir}/hyenadna/hyenadna-tiny-1k-seqlen
+hyenadna-small-32k:
+  _target_ : bend.utils.embedders.HyenaDNAEmbedder
+  model_path : ${embedders_dir}/hyenadna/hyenadna-small-32k-seqlen
+hyenadna-medium-160k:
+  _target_ : bend.utils.embedders.HyenaDNAEmbedder
+  model_path : ${embedders_dir}/hyenadna/hyenadna-medium-160k-seqlen
+hyenadna-medium-450k:
+  _target_ : bend.utils.embedders.HyenaDNAEmbedder
+  model_path : ${embedders_dir}/hyenadna/hyenadna-medium-450k-seqlen
 resnetlm : 
   _target_ : bend.utils.embedders.ConvNetEmbedder
   model_path : ${embedders_dir}/resnetlm/
@@ -47,12 +66,15 @@ awdlstm :
 nt_transformer_ms :
   _target_ : bend.utils.embedders.NucleotideTransformerEmbedder
   model_name : InstaDeepAI/nucleotide-transformer-2.5b-multi-species
+  upsample_embeddings : true
 nt_transformer_human_ref:
   _target_ : bend.utils.embedders.NucleotideTransformerEmbedder
   model_name : InstaDeepAI/nucleotide-transformer-500m-human-ref
+  upsample_embeddings : true
 nt_transformer_1000g:
   _target_ : bend.utils.embedders.NucleotideTransformerEmbedder
   model_name : InstaDeepAI/nucleotide-transformer-2.5b-1000g
+  upsample_embeddings : true
 onehot:
   _target_ : bend.utils.embedders.OneHotEmbedder
 # data configurations for each task

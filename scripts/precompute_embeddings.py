@@ -15,11 +15,11 @@ def run_experiment(cfg: DictConfig) -> None:
         splits = sequtils.get_splits(cfg[task].bed)
         for model in cfg.models:
             print('Embedding with', model) 
+            # instatiante model
+            embedder = hydra.utils.instantiate(cfg[model])
             for split in splits:
                 output_dir = f'{cfg.data_dir}/{task}/{model}/'
                 os.makedirs(output_dir, exist_ok=True)
-                # instatiante model
-                embedder = hydra.utils.instantiate(cfg[model])
                 gen = sequtils.embed_from_bed(**cfg[task], embedder = embedder, split = split, 
                                              upsample_embeddings = cfg[model]['upsample_embeddings'] if 'upsample_embeddings' in cfg[model] else False)
                 # save the embeddings to tfrecords 
@@ -31,5 +31,5 @@ def run_experiment(cfg: DictConfig) -> None:
 
 
 if __name__ == '__main__':
-    print('Run experiment')
+    print('Run Embedding')
     run_experiment()
