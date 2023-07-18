@@ -507,23 +507,30 @@ class HyenaDNAEmbedder(BaseEmbedder):
         embeddings = [] 
         with torch.inference_mode():
             for s in tqdm(sequences, disable=disable_tqdm):
+                chunks = [s[chunk : chunk + self.max_length] for chunk in  range(0, len(s), self.max_length)] # split into chunks
+                embedded_chunks = []
+                for n_chunk, chunk in enumerate(chunks):
+                    #### Single embedding example ####
 
-                #### Single embedding example ####
+                    # create a sample 450k long, prepare
+                    # sequence = 'ACTG' * int(self.max_length/4)
+                    tok_seq = self.tokenizer(chunk) # adds CLS and SEP tokens
+                    tok_seq = tok_seq["input_ids"]  # grab ids
 
-                # create a sample 450k long, prepare
-                # sequence = 'ACTG' * int(self.max_length/4)
-                tok_seq = self.tokenizer(s) # adds CLS and SEP tokens
-                tok_seq = tok_seq["input_ids"]  # grab ids
-
-                # place on device, convert to tensor
-                tok_seq = torch.LongTensor(tok_seq).unsqueeze(0)  # unsqueeze for batch dim
-                tok_seq = tok_seq.to(device)
+                    # place on device, convert to tensor
+                    tok_seq = torch.LongTensor(tok_seq).unsqueeze(0)  # unsqueeze for batch dim
+                    tok_seq = tok_seq.to(device)
 
 
-                embedding = self.model(tok_seq)
-                if remove_special_tokens:
-                    embedding = embedding[:,1:-1]
-                embeddings.append(embedding.detach().cpu().numpy())
+                    output = self.model(tok_seq)
+                    if remove_special_tokens:
+                        output = output[:,1:-1]
+
+                    embedded_chunks.append(output.detach().cpu().numpy())
+
+                embedding = np.concatenate(embedded_chunks, axis=1)
+                
+                embeddings.append(embedding)
 
         return embeddings
 
