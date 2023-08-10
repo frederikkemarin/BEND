@@ -1,8 +1,8 @@
 gene_finding: 9
 enhancer_annotation: 2
 variant_effects: 2
-histone_modification: 2
-chromatin_accesibility: 2
+histone_modification: 18
+chromatin_accesibility: 125
 onehot: 5
 gpn: 512
 nt_transformer_2B5_1000G: 2560
