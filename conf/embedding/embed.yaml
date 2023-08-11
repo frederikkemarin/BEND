@@ -6,7 +6,7 @@ embedders_dir : ./pretrained_models/
 models : 
   #- gena-lm-bigbird-base-t2t
   #- gena-lm-bert-large-t2
-  #- hyenadna-tiny-1k
+  - hyenadna-tiny-1k
   #- hyenadna-small-32k
   #- hyenadna-medium-160k
   #- hyenadna-medium-450k
