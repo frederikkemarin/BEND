@@ -69,7 +69,7 @@ embedder = HyenaDNAEmbedder('pretrained_models/hyenadna/hyenadna-tiny-1k-seqlen'
 
 ### 3. Evaluating models
 
-#### Training supervised models
+#### Training and evaluating supervised models
 
 It is first required that the [above step (computing the embeddings)](#2-computing-embeddings) is completed.
 The embeddings should afterwards be located in `BEND/data/{task_name}/{embedder}/*tfrecords`
