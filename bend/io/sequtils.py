@@ -26,9 +26,10 @@ class Fasta():
     def __init__(self, fasta) -> None:
         self._fasta = pysam.FastaFile(fasta)
     
-    def fetch(self, chrom, start, end, strand='+'):
+    def fetch(self, chrom, start, end, strand='+', reverse = False):
         sequence = self._fasta.fetch(chrom, start, end).upper()
-
+        if reverse:
+            sequence = sequence[::-1]
         if strand == '+':
             pass
         elif strand == '-':
@@ -52,13 +53,15 @@ def embed_from_multilabled_bed_gen(bed, reference_fasta, embedder, label_column_
             sequence = fasta.fetch(chrom, start, end, strand)
 
             # embed sequence and multi-hot encode labels
-            sequence_emebd = tf.squeeze(tf.constant(embedder(sequence)))
+            sequence_embed = tf.squeeze(tf.constant(embedder(sequence)))
             labels_multi_hot = multi_hot(labels, depth=label_depth)
 
-            yield {'inputs': sequence_emebd, 'outputs': labels_multi_hot}
+            yield {'inputs': sequence_embed, 'outputs': labels_multi_hot}
 
 
-def embed_from_bed(bed, reference_fasta, embedder, hdf5_file= None, read_strand = False, label_column_idx=6, label_depth=None, split = None):
+def embed_from_bed(bed, reference_fasta, embedder, upsample_embeddings = False, 
+                  hdf5_file= None, read_strand = False, 
+                  read_reverse = False, label_column_idx=6, label_depth=None, split = None):
     fasta = Fasta(reference_fasta)
     # open hdf5 file 
     hdf5_file = h5py.File(hdf5_file, mode = "r")
@@ -70,18 +73,20 @@ def embed_from_bed(bed, reference_fasta, embedder, hdf5_file= None, read_strand 
     for n, line in tqdm.tqdm(f.iterrows()):
         # get bed row
         if read_strand:
-            chrom, start, end, strand = line[0], int(line[1]), int(line[2]), line[3]
+            chrom, start, end, strand, reverse = line[0], int(line[1]), int(line[2]), line[3], False
+        if read_reverse: 
+            chrom, start, end, strand, reverse = line[0], int(line[1]), int(line[2]), '+', bool(line[4])
         else:
-            chrom, start, end, strand = line[0], int(line[1]), int(line[2]), '+' # strand wil not be reversed
+            chrom, start, end, strand, reverse = line[0], int(line[1]), int(line[2]), '+', False # strand wil not be reversed
         if hdf5_file is not None: 
             labels = hdf5_file['labels'][n]
         else: 
             labels = list(map(int, line[label_column_idx].split(',')))
             labels = multi_hot(labels, depth=label_depth)
         # get sequence
-        sequence = fasta.fetch(chrom, start, end, strand) # categorical labels
+        sequence = fasta.fetch(chrom, start, end, strand = strand, reverse = reverse) # categorical labels
         # embed sequence
-        sequence_embed = tf.squeeze(tf.constant(embedder(sequence)))
+        sequence_embed = tf.squeeze(tf.constant(embedder(sequence, upsample_embeddings = upsample_embeddings)))
         yield {'inputs': sequence_embed, 'outputs': labels}
 
 

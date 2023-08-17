@@ -72,7 +72,7 @@ class BaseEmbedder():
 
 class GPNEmbedder(BaseEmbedder):
 
-    def load_model(self, model_name: str = "songlab/gpn-brassicales" ):
+    def load_model(self, model_name: str = "songlab/gpn-brassicales" , **kwargs):
         try:
             import gpn.model
         except ModuleNotFoundError as e:
@@ -85,7 +85,7 @@ class GPNEmbedder(BaseEmbedder):
         self.model.to(device)
         self.model.eval()
 
-    def embed(self, sequences: List[str], disable_tqdm: bool = False) -> List[np.ndarray]:
+    def embed(self, sequences: List[str], disable_tqdm: bool = False, upsample_embeddings: bool = False) -> List[np.ndarray]:
         '''Run the GPN model https://www.biorxiv.org/content/10.1101/2022.08.22.504706v1'''
 
         embeddings = []
@@ -109,7 +109,8 @@ class DNABertEmbedder(BaseEmbedder):
 
     def load_model(self, 
                    dnabert_path: str = '../../external-models/DNABERT/', 
-                   kmer: int = 6, ):
+                   kmer: int = 6, 
+                   **kwargs):
 
         dnabert_path = f'{dnabert_path}/DNABERT{kmer}/'
         # check if path exists
@@ -215,7 +216,7 @@ class DNABertEmbedder(BaseEmbedder):
 
 class NucleotideTransformerEmbedder(BaseEmbedder):
 
-    def load_model(self, model_name):
+    def load_model(self, model_name, **kwargs):
 
 
         # Get pretrained model
@@ -290,7 +291,7 @@ class AWDLSTMEmbedder(BaseEmbedder):
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
 
-    def embed(self, sequences: List[str], disable_tqdm: bool = False):
+    def embed(self, sequences: List[str], disable_tqdm: bool = False, upsample_embeddings: bool = False):
         '''Tokenizes and embeds sequences. CLS token is removed from the output.'''
         embeddings = []
         with torch.no_grad():
@@ -318,7 +319,7 @@ class ConvNetEmbedder(BaseEmbedder):
         # load model        
         self.model = ConvNetModel.from_pretrained(model_path).to(device).eval()
     
-    def embed(self, sequences: List[str], disable_tqdm: bool = False):
+    def embed(self, sequences: List[str], disable_tqdm: bool = False, upsample_embeddings: bool = False):
         embeddings = [] 
         with torch.no_grad():
             for s in tqdm(sequences, disable=disable_tqdm):
@@ -440,10 +441,8 @@ class HyenaDNAEmbedder(BaseEmbedder):
         'hyenadna-medium-450k-seqlen' 
         'hyenadna-large-1m-seqlen' 
         '''
-
         # you only need to select which model to use here, we'll do the rest!
         checkpoint_path, model_name = os.path.split(model_path)
-
         max_lengths = {
             'hyenadna-tiny-1k-seqlen': 1024,
             'hyenadna-small-32k-seqlen': 32768,
@@ -470,12 +469,11 @@ class HyenaDNAEmbedder(BaseEmbedder):
         backbone_cfg = None
 
         is_git_lfs_repo = os.path.exists('.git/hooks/pre-push')
-
         # use the pretrained Huggingface wrapper instead
         model = HyenaDNAPreTrainedModel.from_pretrained(
             checkpoint_path,
             model_name,
-            download=True,
+            download=not os.path.exists(model_path),
             config=backbone_cfg,
             device=device,
             use_head=use_head,
@@ -500,7 +498,7 @@ class HyenaDNAEmbedder(BaseEmbedder):
             padding_side='left', # since HyenaDNA is causal, we pad on the left
         )
 
-    def embed(self, sequences: List[str], disable_tqdm: bool = False, remove_special_tokens: bool = True):
+    def embed(self, sequences: List[str], disable_tqdm: bool = False, remove_special_tokens: bool = True, upsample_embeddings: bool = False):
 
     # # prep model and forward
     # model.to(device)
@@ -509,23 +507,30 @@ class HyenaDNAEmbedder(BaseEmbedder):
         embeddings = [] 
         with torch.inference_mode():
             for s in tqdm(sequences, disable=disable_tqdm):
+                chunks = [s[chunk : chunk + self.max_length] for chunk in  range(0, len(s), self.max_length)] # split into chunks
+                embedded_chunks = []
+                for n_chunk, chunk in enumerate(chunks):
+                    #### Single embedding example ####
 
-                #### Single embedding example ####
+                    # create a sample 450k long, prepare
+                    # sequence = 'ACTG' * int(self.max_length/4)
+                    tok_seq = self.tokenizer(chunk) # adds CLS and SEP tokens
+                    tok_seq = tok_seq["input_ids"]  # grab ids
 
-                # create a sample 450k long, prepare
-                # sequence = 'ACTG' * int(self.max_length/4)
-                tok_seq = self.tokenizer(s) # adds CLS and SEP tokens
-                tok_seq = tok_seq["input_ids"]  # grab ids
-
-                # place on device, convert to tensor
-                tok_seq = torch.LongTensor(tok_seq).unsqueeze(0)  # unsqueeze for batch dim
-                tok_seq = tok_seq.to(device)
+                    # place on device, convert to tensor
+                    tok_seq = torch.LongTensor(tok_seq).unsqueeze(0)  # unsqueeze for batch dim
+                    tok_seq = tok_seq.to(device)
 
 
-                embedding = self.model(tok_seq)
-                if remove_special_tokens:
-                    embedding = embedding[:,1:-1]
-                embeddings.append(embedding.detach().cpu().numpy())
+                    output = self.model(tok_seq)
+                    if remove_special_tokens:
+                        output = output[:,1:-1]
+
+                    embedded_chunks.append(output.detach().cpu().numpy())
+
+                embedding = np.concatenate(embedded_chunks, axis=1)
+                
+                embeddings.append(embedding)
 
         return embeddings
 
@@ -561,10 +566,10 @@ class DNABert2Embedder(BaseEmbedder):
 
                 embedded_chunks = []
                 for n_chunk, chunk in enumerate(chunks):
-                    print(n_chunk)
+                    #print(n_chunk)
 
                     input_ids = self.tokenizer(chunk, return_tensors="pt", return_attention_mask=False, return_token_type_ids=False)["input_ids"]
-                    print(input_ids.shape)
+                    #print(input_ids.shape)
                     output = self.model(input_ids.to(device))[0].detach().cpu().numpy()
 
                     if upsample_embeddings:
@@ -620,6 +625,31 @@ class DNABert2Embedder(BaseEmbedder):
 
 # Class for one-hot encoding.
 categories_4_letters_unknown = ['A', 'C', 'G', 'N', 'T']
+
+class OneHotEmbedder(BaseEmbedder):
+
+    def __init__(self, nucleotide_categories = categories_4_letters_unknown):
+        
+        self.nucleotide_categories = nucleotide_categories
+        
+        self.label_encoder = LabelEncoder().fit(self.nucleotide_categories)
+    
+    def embed(self, sequences: List[str], disable_tqdm: bool = False, return_onehot: bool = False, upsample_embeddings: bool = False):
+        """Onehot endode sequences"""
+        embeddings = []
+        for s in tqdm(sequences, disable=disable_tqdm):
+            s = self.transform_integer(s, return_onehot = return_onehot)
+            embeddings.append(s)
+        return embeddings
+    
+    def transform_integer(self, sequence : str, return_onehot = False): # integer/onehot encode sequence
+        sequence = np.array(list(sequence))
+        
+        sequence = self.label_encoder.transform(sequence)
+        if return_onehot:
+            sequence = np.eye(len(self.nucleotide_categories))[sequence]
+        return sequence
+        
 
 class EncodeSequence:
     def __init__(self, nucleotide_categories = categories_4_letters_unknown):

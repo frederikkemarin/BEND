@@ -2,8 +2,8 @@ datadims:
   gene_finding: 9
   enhancer_annotation_label_dim: 2
   variant_effects_label_dim: 2
-  histone_modification_label_dim: 2
-  chromatin_accesibility_label_dim: 2
+  histone_modification_label_dim: 18
+  chromatin_accesibility_label_dim: 125
   onehot: 5
   gpn: 512
   nt_transformer_2B5_1000G: 2560
