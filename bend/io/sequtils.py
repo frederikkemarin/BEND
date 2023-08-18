@@ -9,8 +9,8 @@ import h5py
 baseComplement = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A'}
 
 def has_header(file, nrows=20):
-    df = pd.read_csv(file, header=None, nrows=nrows, sep='\s+')
-    df_header = pd.read_csv(file, nrows=nrows, sep='\s+')
+    df = pd.read_csv(file, header=None, nrows=nrows, sep='\t')
+    df_header = pd.read_csv(file, nrows=nrows, sep='\t')
     return tuple(df.dtypes) != tuple(df_header.dtypes)
 
 # %%
@@ -64,18 +64,21 @@ def embed_from_bed(bed, reference_fasta, embedder, upsample_embeddings = False,
                   read_reverse = False, label_column_idx=6, label_depth=None, split = None):
     fasta = Fasta(reference_fasta)
     # open hdf5 file 
-    hdf5_file = h5py.File(hdf5_file, mode = "r")
+    hdf5_file = h5py.File(hdf5_file, mode = "r") if hdf5_file else None
     header = 'infer' if has_header(bed) else None
     f = pd.read_csv(bed, header = header, sep = '\s+')
+    
+    label_column_idx = f.columns.get_loc('label') if 'label' in f.columns else label_column_idx
+    strand_column_idx = f.columns.get_loc('strand') if 'strand' in f.columns else 3
     if split: 
         f = f[f.iloc[:, -1] == split]
 
     for n, line in tqdm.tqdm(f.iterrows()):
         # get bed row
         if read_strand:
-            chrom, start, end, strand, reverse = line[0], int(line[1]), int(line[2]), line[3], False
+            chrom, start, end, strand, reverse = line[0], int(line[1]), int(line[2]), line[strand_column_idx], False
         if read_reverse: 
-            chrom, start, end, strand, reverse = line[0], int(line[1]), int(line[2]), '+', bool(line[4])
+            chrom, start, end, strand, reverse = line[0], int(line[1]), int(line[2]), '+', bool(line[4]) # strand will be reversed
         else:
             chrom, start, end, strand, reverse = line[0], int(line[1]), int(line[2]), '+', False # strand wil not be reversed
         if hdf5_file is not None: 
