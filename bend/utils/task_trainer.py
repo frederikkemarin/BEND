@@ -235,6 +235,7 @@ class BaseTrainer:
     def train_step(self, batch, idx = 0):
         self.model.train()
         data, target = batch
+        
         with torch.autocast(device_type='cuda', dtype=torch.float16):
             output = self.model(data.to(self.device), length = target.shape[-1], 
                                 activation = self.config.params.activation) 
@@ -242,7 +243,6 @@ class BaseTrainer:
                 output = output.squeeze(1)
             loss = self.criterion(output, target.to(self.device).long())
             loss = loss / self.gradient_accumulation_steps
-            
         # Accumulates scaled gradients.
         self.scaler.scale(loss).backward()
         if ((idx + 1) % self.gradient_accumulation_steps == 0) : #or (idx + 1 == len_dataloader):
@@ -266,14 +266,13 @@ class BaseTrainer:
         loss = 0
         outputs = []
         targets_all = []
-
         with torch.no_grad():
             for idx, (data, target) in enumerate(data_loader):
                 mask = target != self.config.data.padding_value
                 output = self.model(data.to(self.device), activation = self.config.params.activation)
                 if self.config.task == 'chromatin_accessibility' or self.config.task == 'histone_modification':
                     output = output.squeeze(1)
-                    outputs.append(self.model.sigmoid(output), dim=-1)[mask].detach().cpu()
+                    outputs.append(self.model.sigmoid(output)[mask].detach().cpu())
                 else: 
                     outputs.append(torch.argmax(self.model.softmax(output), dim=-1)[mask].detach().cpu()) 
                 loss += self.criterion(output, target.to(self.device).long()).item()
