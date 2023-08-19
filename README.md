@@ -3,7 +3,9 @@
 ![Stars](https://img.shields.io/github/stars/frederikkemarin/BEND?logo=GitHub&color=yellow)
 [![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
-Data is available at https://sid.erda.dk/cgi-sid/ls.py?share_id=eXAmVvbRSW
+## Data
+
+All data is available for download at https://sid.erda.dk/cgi-sid/ls.py?share_id=eXAmVvbRSW
 
 ## Tutorial
 
@@ -247,7 +249,7 @@ The datasets included in BEND were collected from a variety of sources. When you
     }
 
 
-### Noncoding Variant Effects ([DeepSEA](https://www.nature.com/articles/nmeth.3547))
+### Noncoding Variant Effects (Expression) ([DeepSEA](https://www.nature.com/articles/nmeth.3547))
 DeepSEA's data was sourced from [GRASP](https://grasp.nhlbi.nih.gov/Overview.aspx) and the [1000 Genomes Project](https://www.internationalgenome.org/), which should also be attributed accordingly.
 
     @article{zhou_predicting_2015,
@@ -262,6 +264,27 @@ DeepSEA's data was sourced from [GRASP](https://grasp.nhlbi.nih.gov/Overview.asp
 	year = {2015},
     }
 
+### Noncoding variant effects (Disease) ([ClinVar](https://www.encodeproject.org/))
+In case the variant consequences categories are used, [Ensembl VEP](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-016-0974-4) should be attributed.
+
+    @article{10.1093/nar/gkz972,
+    author = {Landrum, Melissa J and Chitipiralla, Shanmuga and Brown, Garth R and Chen, Chao and Gu, Baoshan and Hart, Jennifer and Hoffman, Douglas and Jang, Wonhee and Kaur, Kuljeet and Liu, Chunlei and Lyoshin, Vitaly and Maddipatla, Zenith and Maiti, Rama and Mitchell, Joseph and O’Leary, Nuala and Riley, George R and Shi, Wenyao and Zhou, George and Schneider, Valerie and Maglott, Donna and Holmes, J Bradley and Kattman, Brandi L},
+    title = "{ClinVar: improvements to accessing data}",
+    journal = {Nucleic Acids Research},
+    volume = {48},
+    number = {D1},
+    pages = {D835-D844},
+    year = {2019},
+    month = {11},
+    issn = {0305-1048},
+    doi = {10.1093/nar/gkz972},
+    url = {https://doi.org/10.1093/nar/gkz972},
+    eprint = {https://academic.oup.com/nar/article-pdf/48/D1/D835/31698033/gkz972.pdf},
+}
+
+
+
+
 
 ## FAQ
 
@@ -272,4 +295,5 @@ Model | Upsampling strategy
 --- | ---
 DNABert | The overlapping k-mer tokenization strategy of DNABert causes some "missing embeddings" at the start and the end of the input sequence, as there is no context to build the k-mer tokens from. For `k=3`, we repeat the first and the last embedding vectors once. For `k=4`, we repeat the first once and the last twice. For `k=5`, we repeat the first and the last twice. For `k=6`, we repeat the first twice and the last three times. 
 Nucleotide Transformer | Due to 6-mer tokenization, each embedding is repeated 6 times. Remainder tokens are single nucleotides and left as-is.
-GENA-LM | BPE tokens have variable length. We repeat each embedding vector to the length of the sequence represented by its token.
+GENA-LM, DNABERT-2 | BPE tokens have variable length. We repeat each embedding vector to the length of the sequence represented by its token.
+
