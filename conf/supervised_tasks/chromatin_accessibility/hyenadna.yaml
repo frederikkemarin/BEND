@@ -36,7 +36,7 @@ params:
   gradient_accumulation_steps: 1
   criterion: bce
   class_weights: null
-  metric : mcc
+  metric : auroc
   activation : none
 wandb:
   mode : disabled 

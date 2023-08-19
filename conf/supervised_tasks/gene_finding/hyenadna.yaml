@@ -5,11 +5,11 @@ hydra :
   searchpath:
     - file://conf 
 task : gene_finding 
-embedder : hyenadna-tiny-1k
+embedder : hyenadna-small-32k
 output_dir: ./downstream_tasks/${task}/${embedder}/
 model:
   _target_: bend.models.downstream.CNN
-  input_size: ${datadims.${embedder}}
+  input_size: ${datadims.hyenadna}
   output_size: ${datadims.${task}}
   hidden_size: 64
   kernel_size: 3

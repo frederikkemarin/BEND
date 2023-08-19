@@ -1,13 +1,10 @@
-defaults:
-  - datadims : [label_dims,embedding_dims]
-  - _self_
 hydra : 
   searchpath:
     - file://conf 
-data_dir : /z/home/frma/projects/BEND/data/ #/z/datasets/ds_er_etl/frma/data/
+data_dir : /z/datasets/ds_er_etl/frma/data/
 embedders_dir : ./pretrained_models/
 models : 
-  - gena-lm-bigbird-base-t2t
+  #- gena-lm-bigbird-base-t2t
   #- gena-lm-bert-large-t2
   #- hyenadna-tiny-1k
   #- hyenadna-small-32k
@@ -23,12 +20,11 @@ models :
   #- dnabert2
   #- onehot
 tasks : 
-  #- gene_finding
+  - gene_finding
   #- enhancer_annotation
   #- variant_effects
-  - histone_modification
+  #- histone_modification
   #- chromatin_accessibility
-  #- cpg_methylation
 # model instatiators 
 dnabert2:
   _target_ : bend.utils.embedders.DNABert2Embedder
@@ -81,7 +77,6 @@ nt_transformer_1000g:
   upsample_embeddings : true
 onehot:
   _target_ : bend.utils.embedders.OneHotEmbedder
-
 # data configurations for each task
 gene_finding:
   reference_fasta : ${data_dir}/genomes/GRCh38.primary_assembly.genome.fa
@@ -98,15 +93,13 @@ variant_effects:
   bed : ${data_dir}/variant_effects/variant_effects.bed
   read_strand : false
 histone_modification:
-  bed : ${data_dir}/histone_modification/histone_modification.bed
+  bed : samples.Histone-ChIP.512.bed
   reference_fasta : ${data_dir}/genomes/GRCh38.primary_assembly.genome.fa
-  read_strand : true
+  read_strand : false
   hdf5_file : null
-  label_depth : ${datadims.histone_modification}
 chromatin_accessibility:
-  bed : ${data_dir}/chromatin_accessibility/chromatin_accessibility.bed
+  bed : samples.DNase-I.512.bed
   reference_fasta : ${data_dir}/genomes/GRCh37.no-chr.fa
-  read_strand : true
+  read_strand : false
   hdf5_file : null
-  label_depth : ${datadims.chromatin_accessibility}
 

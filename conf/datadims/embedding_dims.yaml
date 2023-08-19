@@ -12,4 +12,3 @@ gena-lm-bigbird-base-t2t : 768
 gena-lm-bert-large-t2 : 1024
 hyenadna-large-1m : 256
 hyenadna : 256
-hyenadna-tiny-1k : 128
