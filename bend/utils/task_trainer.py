@@ -9,6 +9,7 @@ from sklearn.metrics import matthews_corrcoef, roc_auc_score, average_precision_
 from sklearn.feature_selection import r_regression
 import pandas as pd
 from typing import Union
+import numpy as np
 
 class CrossEntropyLoss(nn.Module):
     def __init__(self, 
@@ -221,6 +222,7 @@ class BaseTrainer:
         for epoch in range(1+ start_epoch, epochs + 1):
             train_loss = self.train_epoch(train_loader)
             val_loss, val_metric = self.validate(val_loader)
+            val_metric = val_metric.mean()
             # save epoch in output dir
             self._save_checkpoint(epoch, train_loss, val_loss, val_metric)
             # log losses to csv
@@ -309,8 +311,18 @@ class BaseTrainer:
 
         # test
         loss, metric = self.validate(test_loader, save_output = False)
-        print(f'Test results : Loss {loss:.4f}, {self.config.params.metric} {metric:.4f}')
-        new_metrics = pd.DataFrame(data = [[loss, metric]], columns = ['test_loss', f'test_{self.config.params.metric}'])
+        # also save test metrics just in case 
+        f = open(f'{self.config.output_dir}/test_metrics_checkpoint{epoch}.txt', "a")
+        f.write(f'Epoch: {epoch} \nloss: {loss} \nmetric : {metric}')
+        f.close()
+        print(f'Test results : Loss {loss:.4f}, {self.config.params.metric} {metric.mean():.4f}')
+        if isinstance(metric, np.ndarray):
+            columns = ['test_loss'] +[f'test_{self.config.params.metric}_{n}' for n in range(len(metric))]
+            data = [[loss] + list(metric)]
+        else:
+            data = [[loss, metric]]
+            columns = ['test_loss', f'test_{self.config.params.metric}']
+        new_metrics = pd.DataFrame(data = data, columns = columns)
         metrics = checkpoint.merge(new_metrics, how = 'cross')
 
         if not overwrite and os.path.exists(f'{self.config.output_dir}/best_model_metrics.csv'):
