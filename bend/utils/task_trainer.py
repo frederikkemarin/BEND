@@ -135,7 +135,10 @@ class BaseTrainer:
             metric =  matthews_corrcoef(y_true.numpy().ravel(), y_pred.numpy().ravel())
     
         elif self.config.params.metric == 'auroc':
-            metric = roc_auc_score(y_true.numpy().ravel(), y_pred.numpy().ravel(), average = 'macro') # flatten arrays to get pearsons r
+            if self.config.task == 'histone_modification' or self.config.task == 'chromatin_accessibility':
+                metric = roc_auc_score(y_true.numpy(), y_pred.numpy(), average = None)
+            else:
+                metric = roc_auc_score(y_true.numpy().ravel(), y_pred.numpy().ravel(), average = 'macro') # flatten arrays to get pearsons r
             
         elif self.config.params.metric == 'pearsonr':
             metric = r_regression(y_true.detach().numpy().reshape(-1,1), 
@@ -302,7 +305,7 @@ class BaseTrainer:
         # load checkpoint
         print(f'{self.config.output_dir}/checkpoints/epoch_{int(checkpoint["Epoch"].iloc[0])}.pt')
         epoch, train_loss, val_loss, val_metric = self._load_checkpoint(f'{self.config.output_dir}/checkpoints/epoch_{int(checkpoint["Epoch"].iloc[0])}.pt')
-        print(f'Loaded checkpoint from epoch {epoch}, train loss: {train_loss:.3f}, val loss: {val_loss:.3f}, Val {self.config.params.metric}: {val_metric:.3f}')
+        print(f'Loaded checkpoint from epoch {epoch}, train loss: {train_loss:.3f}, val loss: {val_loss:.3f}, Val {self.config.params.metric}: {val_metric.mean():.3f}')
 
         # test
         loss, metric = self.validate(test_loader, save_output = False)
