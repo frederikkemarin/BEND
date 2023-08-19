@@ -21,8 +21,15 @@ chr1	    1055037	1055849	train	1
 chr3	    1070026	1070436	valid	0
 ```
 
+### 2. Setup
 
-### 2. Computing embeddings
+We recommend installing BEND in a conda environment with Python 3.10.
+1. Clone the BEND repository: `git clone https://github.com/frederikkemarin/BEND.git`
+2. Change to the BEND directory: `cd BEND`
+3. Install the requirements: `pip install -r requirements.txt`
+4. Install BEND in development mode: `pip install -e .`
+
+### 3. Computing embeddings
 
 For training downstream models, it is practical to precompute and save the embeddings to avoid recomputing them at each epoch. As embeddings can grow large when working with genomes, we use TFRecords as the format.
 Firstly download the desired data from the [data folder](https://sid.erda.dk/cgi-sid/ls.py?share_id=eXAmVvbRSW) and place it in BEND/ (for ease of use maintain the same folder structure). 
@@ -69,7 +76,7 @@ embedder = HyenaDNAEmbedder('pretrained_models/hyenadna/hyenadna-tiny-1k-seqlen'
 ```
 
 
-### 3. Evaluating models
+### 4. Evaluating models
 
 #### Training and evaluating supervised models
 
