@@ -119,7 +119,7 @@ class BaseTrainer:
         # wandb.log({"Training latent with labels": wandb.Image(plt)})
         return
     
-    def _calculate_metric(self, y_true, y_pred, average = True):
+    def _calculate_metric(self, y_true, y_pred):
         ''' 
         Calculates the metric for the given task
         The metric calculated is specified in the config.params.metric
@@ -133,13 +133,8 @@ class BaseTrainer:
             metric =  matthews_corrcoef(y_true.numpy().ravel(), y_pred.numpy().ravel())
     
         elif self.config.params.metric == 'auroc':
-            # TODO : calculate AUROC per label
-            # make sure both labels and predicted are onehot encoded. then to auroc per row 
-            if average is True:
-                metric = roc_auc_score(y_true.numpy().ravel(), y_pred.numpy().ravel(), average = 'macro') # flatten arrays to get pearsons r
-            else: 
-                # calculate per row 
-                pass
+            metric = roc_auc_score(y_true.numpy().ravel(), y_pred.numpy().ravel(), average = 'macro') # flatten arrays to get pearsons r
+            
         elif self.config.params.metric == 'pearsonr':
             metric = r_regression(y_true.detach().numpy().reshape(-1,1), 
                                     y_pred.detach().numpy().ravel())[0] # flatten arrays to get pearsons r
@@ -195,7 +190,7 @@ class BaseTrainer:
         return train_loss
     
 
-               
+    
     def train(self, 
               train_loader, 
               val_loader, 
