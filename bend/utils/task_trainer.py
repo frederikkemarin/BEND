@@ -266,8 +266,10 @@ class BaseTrainer:
                 output = self.model(data.to(self.device), activation = self.config.params.activation)
                 if self.config.task == 'chromatin_accessibility' or self.config.task == 'histone_modification':
                     output = output.squeeze(1)
+                    outputs.append(self.model.sigmoid(output), dim=-1)[mask].detach().cpu()
+                else: 
+                    outputs.append(torch.argmax(self.model.softmax(output), dim=-1)[mask].detach().cpu()) 
                 loss += self.criterion(output, target.to(self.device).long()).item()
-                outputs.append(torch.argmax(self.model.softmax(output), dim=-1)[mask].detach().cpu()) 
                 targets_all.append(target[mask].detach().cpu())  
 
         loss /= (idx + 1) 
