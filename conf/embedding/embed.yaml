@@ -28,6 +28,7 @@ tasks :
   #- variant_effects
   - histone_modification
   #- chromatin_accessibility
+  #- cpg_methylation
 # model instatiators 
 dnabert2:
   _target_ : bend.utils.embedders.DNABert2Embedder

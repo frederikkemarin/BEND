@@ -5,6 +5,8 @@ from bioio.tf.utils import multi_hot
 import pandas as pd
 import h5py
 
+
+
 # %%
 baseComplement = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A'}
 
@@ -27,7 +29,7 @@ class Fasta():
         self._fasta = pysam.FastaFile(fasta)
     
     def fetch(self, chrom, start, end, strand='+', reverse = False):
-        sequence = self._fasta.fetch(chrom, start, end).upper()
+        sequence = self._fasta.fetch(str(chrom), start, end).upper()
         if reverse:
             sequence = sequence[::-1]
         if strand == '+':

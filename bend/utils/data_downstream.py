@@ -92,10 +92,9 @@ def get_data(data_dir : str,
         train_data = tfrecords
     else: 
         # join data_dir with each item in train_data, valid_data and test_data 
-
-        train_data = [f'{data_dir}/{x}' for x in train_data]
-        valid_data = [f'{data_dir}/{x}' for x in valid_data]
-        test_data = [f'{data_dir}/{x}' for x in test_data]
+        train_data = [f'{data_dir}/{x}' for x in train_data] if train_data else None
+        valid_data = [f'{data_dir}/{x}' for x in valid_data] if valid_data else None
+        test_data = [f'{data_dir}/{x}' for x in test_data] if test_data else None
 
     # get dataloaders
     train_dataloader = return_dataloader(train_data, batch_size = batch_size, 
