@@ -108,11 +108,11 @@ class GPNEmbedder(BaseEmbedder):
 class DNABertEmbedder(BaseEmbedder):
 
     def load_model(self, 
-                   model_path: str = '../../external-models/DNABERT/', 
+                   dnabert_path: str = '../../external-models/DNABERT/', 
                    kmer: int = 6, 
                    **kwargs):
 
-        dnabert_path = model_path
+        dnabert_path = f'{dnabert_path}/DNABERT{kmer}/'
         # check if path exists
         
         if not os.path.exists(dnabert_path):
