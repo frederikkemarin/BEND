@@ -42,7 +42,9 @@ class BCEWithLogitsLoss(nn.Module):
     
     def forward(self, pred, target):
         criterion = torch.nn.BCEWithLogitsLoss()
-        return criterion(pred.permute(0, 2, 1), target)
+        if pred.dim() == 3:
+            return criterion(pred.permute(0, 2, 1), target)
+        return criterion(pred, target)
     
 class MSELoss(nn.Module):
     def __init__(self):
