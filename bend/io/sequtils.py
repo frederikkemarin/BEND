@@ -64,7 +64,7 @@ def embed_from_bed(bed, reference_fasta, embedder, upsample_embeddings = False,
                   read_reverse = False, label_column_idx=6, label_depth=None, split = None):
     fasta = Fasta(reference_fasta)
     # open hdf5 file 
-    hdf5_file = h5py.File(hdf5_file, mode = "r")
+    hdf5_file = h5py.File(hdf5_file, mode = "r") if hdf5_file else None
     header = 'infer' if has_header(bed) else None
     f = pd.read_csv(bed, header = header, sep = '\s+')
     if split: 
