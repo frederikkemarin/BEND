@@ -40,12 +40,15 @@ class PoissonLoss(nn.Module):
 class BCEWithLogitsLoss(nn.Module):
     def __init__(self):
         super(BCEWithLogitsLoss, self).__init__()
+        self.criterion = torch.nn.BCEWithLogitsLoss(reduction = 'none')
     
-    def forward(self, pred, target):
-        criterion = torch.nn.BCEWithLogitsLoss()
+    def forward(self, pred, target, padding_value = -100):
         if pred.dim() == 3:
-            return criterion(pred.permute(0, 2, 1), target)
-        return criterion(pred, target.float())
+            loss =  self.criterion(pred.permute(0, 2, 1), target.float())
+        else: 
+            loss = self.criterion(pred, target.float())
+        # remove loss for padded positions and return
+        return torch.mean(loss[~target != padding_value])
     
 class MSELoss(nn.Module):
     def __init__(self):
@@ -132,12 +135,22 @@ class BaseTrainer:
         Returns:
             metric: the metric value
         '''
+        # check if any padding in the target
+        if torch.any(y_true  == self.config.data.padding_value):
+            mask = y_true != self.config.data.padding_value
+            y_true = y_true[mask]
+            y_pred = y_pred[mask]
+
         if self.config.params.metric == 'mcc':
             metric =  matthews_corrcoef(y_true.numpy().ravel(), y_pred.numpy().ravel())
     
         elif self.config.params.metric == 'auroc':
             if self.config.task == 'histone_modification' or self.config.task == 'chromatin_accessibility':
+                print('dont average metric ')
+                print(y_true.shape, y_pred.shape)
+                # save y_true and y_pred 
                 metric = roc_auc_score(y_true.numpy(), y_pred.numpy(), average = None)
+                print(metric)
             else:
                 metric = roc_auc_score(y_true.numpy().ravel(), y_pred.numpy().ravel(), average = 'macro') # flatten arrays to get pearsons r
             
@@ -268,20 +281,19 @@ class BaseTrainer:
         targets_all = []
         with torch.no_grad():
             for idx, (data, target) in enumerate(data_loader):
-                mask = target != self.config.data.padding_value
                 output = self.model(data.to(self.device), activation = self.config.params.activation)
                 if self.config.task == 'chromatin_accessibility' or self.config.task == 'histone_modification':
                     output = output.squeeze(1)
-                    outputs.append(self.model.sigmoid(output)[mask].detach().cpu())
+                    outputs.append(self.model.sigmoid(output).detach().cpu())
                 else: 
-                    outputs.append(torch.argmax(self.model.softmax(output), dim=-1)[mask].detach().cpu()) 
+                    outputs.append(torch.argmax(self.model.softmax(output), dim=-1).detach().cpu()) 
                 loss += self.criterion(output, target.to(self.device).long()).item()
-                targets_all.append(target[mask].detach().cpu())  
+                targets_all.append(target.detach().cpu())  
 
         loss /= (idx + 1) 
         if save_output:
             torch.save({'targets': targets_all, 'outputs': outputs}, f'{self.config.output_dir}/test_set.torch')
-        
+        torch.save({'y_true': targets_all, 'y_pred' :outputs}, '/z/home/frma/test_output.torch')
         # compute metrics
         metric = self._calculate_metric(torch.cat(targets_all), 
                                           torch.cat(outputs))
@@ -312,7 +324,7 @@ class BaseTrainer:
         loss, metric = self.validate(test_loader, save_output = False)
         # also save test metrics just in case 
         f = open(f'{self.config.output_dir}/test_metrics_checkpoint{epoch}.txt', "a")
-        f.write(f'Epoch: {epoch} \nloss: {loss} \nmetric : {metric}')
+        f.write(f'Epoch: {epoch} \nloss: {loss} \nmetric : {metric}\n')
         f.close()
         print(f'Test results : Loss {loss:.4f}, {self.config.params.metric} {metric.mean():.4f}')
         if isinstance(metric, np.ndarray):
