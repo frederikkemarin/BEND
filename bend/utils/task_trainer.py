@@ -328,8 +328,8 @@ class BaseTrainer:
         f.close()
         print(f'Test results : Loss {loss:.4f}, {self.config.params.metric} {metric.mean():.4f}')
         if isinstance(metric, np.ndarray):
-            columns = ['test_loss'] +[f'test_{self.config.params.metric}_{n}' for n in range(len(metric))]
-            data = [[loss] + list(metric)]
+            columns = ['test_loss', 'test_metric_avg'] +[f'test_{self.config.params.metric}_{n}' for n in range(len(metric))]
+            data = [[loss, metric.mean()] + list(metric)]
         else:
             data = [[loss, metric]]
             columns = ['test_loss', f'test_{self.config.params.metric}']
