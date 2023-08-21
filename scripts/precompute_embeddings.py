@@ -11,13 +11,18 @@ from bioio.tf import dataset_to_tfrecord
 @hydra.main(config_path="../conf/embedding/", config_name="embed", version_base=None)
 def run_experiment(cfg: DictConfig) -> None:
     for task in cfg.tasks:
-        # read the bed file and get the splits : 
-        splits = sequtils.get_splits(cfg[task].bed)
+        print('Embedding data for', task)
+        # read the bed file and get the splits :  
+        if not 'splits' in cfg or cfg.splits is None:
+            splits = sequtils.get_splits(cfg[task].bed) 
+        else:
+            splits = cfg.splits
         for model in cfg.models:
             print('Embedding with', model) 
             # instatiante model
             embedder = hydra.utils.instantiate(cfg[model])
             for split in splits:
+                print(f'Embedding {split} set')
                 output_dir = f'{cfg.data_dir}/{task}/{model}/'
                 os.makedirs(output_dir, exist_ok=True)
                 gen = sequtils.embed_from_bed(**cfg[task], embedder = embedder, split = split, 

@@ -5,37 +5,38 @@ hydra :
   searchpath:
     #- pkg://conf
     - file://conf 
-task : enhancer_annotation 
+task : histone_modification 
 embedder : resnet_supervised
-output_dir: ./downstream_tasks/${task}/${embedder}/split_${data.cross_validation}
+output_dir: ./downstream_tasks/${task}/${embedder}/
 model:
   _target_: bend.models.downstream.ConvNetForSupervised
   output_size: ${datadims.${task}}
   n_layers: 30
   hidden_size: 256
-  output_downsample_window: 128
+  output_downsample_window: null
 optimizer : 
   _target_ : torch.optim.AdamW 
-  lr : 0.001
+  lr : 0.003
   weight_decay: 0.01
 data:
   _target_: bend.utils.data_downstream.get_data
-  batch_size : 8
+  cross_validation : false
+  batch_size : 64
   num_workers : 0
   padding_value : -100
-  shuffle : 500
+  shuffle : 5000
   data_dir : ./data/${task}/onehot/
-  cross_validation : 1 # which split to run in the cross validation
+  train_data : [train.tfrecord]
+  valid_data : [valid.tfrecord]
+  test_data :  [test.tfrecord]
 params:
   epochs: 100
-  load_checkpoint: true
+  load_checkpoint: false
   mode: train
   gradient_accumulation_steps: 1
-  criterion: cross_entropy
-  class_weights:
-  - 1
-  - 82.86
-  metric : mcc
+  criterion: bce
+  class_weights: null
+  metric : auroc
   activation : none
 wandb:
   mode : disabled 

@@ -29,6 +29,15 @@ def collate_fn_pad_to_longest(batch,
 
 from typing import Union
 
+def worker_init_fn(self, _):
+        worker_info = torch.utils.data.get_worker_info()
+        dataset = worker_info.dataset
+        worker_id = worker_info.id
+        split_size = len(dataset.data) //worker_info.num_workers
+        dataset.data = dataset.data[worker_id * split_size:(worker_id +1) * split_size]
+
+
+
 def return_dataloader(data : Union[str, list], 
                       batch_size : int = 8, 
                       num_workers : int = 0,
@@ -53,7 +62,7 @@ def get_data(data_dir : str,
              test_data : list = None, 
              cross_validation : Union[bool, int] = False, 
              batch_size : int = 8,
-             num_workers : int = 0,
+             num_workers : int = 32,
              padding_value = -100, 
              shuffle : int = None, 
              **kwargs):
@@ -79,7 +88,8 @@ def get_data(data_dir : str,
         # get all tfrecords in data directory
         tfrecords = glob.glob(f'{data_dir}/*.tfrecord')
         # sort tfrecords
-        tfrecords.sort()
+        #tfrecords.sort()
+        tfrecords = sorted(tfrecords, key=lambda x: int(x.split('/')[-1].split('.')[0][4:]))
         test_data = tfrecords[cross_validation]
         # get valid data, cycle through tfrecords if test set is the last one
         if cross_validation == len(tfrecords) - 1:
@@ -93,20 +103,20 @@ def get_data(data_dir : str,
     else: 
         # join data_dir with each item in train_data, valid_data and test_data 
 
-        train_data = [f'{data_dir}/{x}' for x in train_data]
-        valid_data = [f'{data_dir}/{x}' for x in valid_data]
-        test_data = [f'{data_dir}/{x}' for x in test_data]
+        train_data = [f'{data_dir}/{x}' for x in train_data] if train_data else None
+        valid_data = [f'{data_dir}/{x}' for x in valid_data] if valid_data else None
+        test_data = [f'{data_dir}/{x}' for x in test_data] if test_data else None
 
     # get dataloaders
     train_dataloader = return_dataloader(train_data, batch_size = batch_size, 
                                          num_workers = num_workers, 
                                          padding_value=padding_value, 
-                                         shuffle = shuffle)
+                                         shuffle = shuffle) if train_data else None
     valid_dataloader = return_dataloader(valid_data, batch_size = batch_size, 
                                          num_workers = num_workers, 
-                                         padding_value=padding_value, )
+                                         padding_value=padding_value, ) if valid_data else None
     test_dataloader = return_dataloader(test_data, batch_size = batch_size, 
                                         num_workers = num_workers, 
-                                        padding_value=padding_value, )
+                                        padding_value=padding_value, ) if test_data else None
 
     return train_dataloader, valid_dataloader, test_dataloader

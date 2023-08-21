@@ -149,7 +149,6 @@ class ConvNetForSupervised(nn.Module):
 
     def forward(self, x, activation = 'none', **kwargs):
         x = self.encoder(input_ids=x, **kwargs).last_hidden_state
-        x = self.encoder(x)
         x = self.downstream_cnn(x, activation = activation)
 
         return x
