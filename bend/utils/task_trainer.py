@@ -146,11 +146,8 @@ class BaseTrainer:
     
         elif self.config.params.metric == 'auroc':
             if self.config.task == 'histone_modification' or self.config.task == 'chromatin_accessibility':
-                print('dont average metric ')
-                print(y_true.shape, y_pred.shape)
                 # save y_true and y_pred 
                 metric = roc_auc_score(y_true.numpy(), y_pred.numpy(), average = None)
-                print(metric)
             else:
                 metric = roc_auc_score(y_true.numpy().ravel(), y_pred.numpy().ravel(), average = 'macro') # flatten arrays to get pearsons r
             
@@ -176,12 +173,12 @@ class BaseTrainer:
         '''
 
         checkpoints = [f for f in os.listdir(f'{self.config.output_dir}/checkpoints/') if f.endswith('.pt')]
-
         if len(checkpoints) == 0 or not load_checkpoint:
             print('No checkpoints found, starting from scratch')
             return 
         else:
             if isinstance(load_checkpoint, bool):
+                    print('Load latest checkpoint')
                     load_checkpoint = checkpoints[-1]
             elif isinstance(load_checkpoint, int):
                 load_checkpoint = f'epoch_{load_checkpoint}.pt'
@@ -229,13 +226,13 @@ class BaseTrainer:
         start_epoch = 0
         checkpoint_path = self._get_checkpoint_path(load_checkpoint)
         if checkpoint_path:
-            start_epoch, train_loss, val_loss, val_metric = self._load_checkpoint(f'{self.config.output_dir}/checkpoints/{load_checkpoint}')
+            start_epoch, train_loss, val_loss, val_metric = self._load_checkpoint(checkpoint_path)
             print(f'Loaded checkpoint from epoch {start_epoch}, train loss: {train_loss}, val loss: {val_loss}, val {self.config.params.metric}: {val_metric}')
 
         for epoch in range(1+ start_epoch, epochs + 1):
             train_loss = self.train_epoch(train_loader)
             val_loss, val_metric = self.validate(val_loader)
-            val_metric = val_metric.mean()
+            val_metric = np.mean(val_metric)
             # save epoch in output dir
             self._save_checkpoint(epoch, train_loss, val_loss, val_metric)
             # log losses to csv
@@ -248,7 +245,6 @@ class BaseTrainer:
     def train_step(self, batch, idx = 0):
         self.model.train()
         data, target = batch
-        
         with torch.autocast(device_type='cuda', dtype=torch.float16):
             output = self.model(data.to(self.device), length = target.shape[-1], 
                                 activation = self.config.params.activation) 
@@ -318,7 +314,7 @@ class BaseTrainer:
         # load checkpoint
         print(f'{self.config.output_dir}/checkpoints/epoch_{int(checkpoint["Epoch"].iloc[0])}.pt')
         epoch, train_loss, val_loss, val_metric = self._load_checkpoint(f'{self.config.output_dir}/checkpoints/epoch_{int(checkpoint["Epoch"].iloc[0])}.pt')
-        print(f'Loaded checkpoint from epoch {epoch}, train loss: {train_loss:.3f}, val loss: {val_loss:.3f}, Val {self.config.params.metric}: {val_metric.mean():.3f}')
+        print(f'Loaded checkpoint from epoch {epoch}, train loss: {train_loss:.3f}, val loss: {val_loss:.3f}, Val {self.config.params.metric}: {np.mean(val_metric):.3f}')
 
         # test
         loss, metric = self.validate(test_loader, save_output = False)
@@ -329,7 +325,7 @@ class BaseTrainer:
         print(f'Test results : Loss {loss:.4f}, {self.config.params.metric} {metric.mean():.4f}')
         if isinstance(metric, np.ndarray):
             columns = ['test_loss', 'test_metric_avg'] +[f'test_{self.config.params.metric}_{n}' for n in range(len(metric))]
-            data = [[loss, metric.mean()] + list(metric)]
+            data = [[loss, np.mean(metric)] + list(metric)]
         else:
             data = [[loss, metric]]
             columns = ['test_loss', f'test_{self.config.params.metric}']

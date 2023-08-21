@@ -15,7 +15,7 @@ model:
   hidden_size: 2
   kernel_size: 3
   upsample_factor: null
-  output_downsample_window: null
+  output_downsample_window: 128
 optimizer : 
   _target_ : torch.optim.AdamW 
   lr : 0.001
@@ -31,7 +31,7 @@ data:
   cross_validation : 1 # which split to run in the cross validation
 params:
   epochs: 100
-  load_checkpoint: false
+  load_checkpoint: true
   mode: train
   gradient_accumulation_steps: 1
   criterion: cross_entropy

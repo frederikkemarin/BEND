@@ -108,11 +108,12 @@ class GPNEmbedder(BaseEmbedder):
 class DNABertEmbedder(BaseEmbedder):
 
     def load_model(self, 
-                   dnabert_path: str = '../../external-models/DNABERT/', 
+                   model_path: str = '../../external-models/DNABERT/', 
                    kmer: int = 6, 
                    **kwargs):
 
-        dnabert_path = f'{dnabert_path}/DNABERT{kmer}/'
+        dnabert_path = model_path
+        #dnabert_path = f'{dnabert_path}/DNABERT{kmer}/'
         # check if path exists
         
         if not os.path.exists(dnabert_path):
@@ -135,9 +136,11 @@ class DNABertEmbedder(BaseEmbedder):
                 kmers = self._seq2kmer_batch(sequence, self.kmer)
                 model_input = self.tokenizer.batch_encode_plus(kmers, 
                                                                add_special_tokens=True,
+                                                               padding = 'max_length',
+                                                               max_length = len(sequence[0])+2, 
                                                                return_tensors='pt', 
                                                                )["input_ids"]
-
+                
                 if model_input.shape[1] > 512:
                     model_input = torch.split(model_input, 512, dim=1)
                     output = []
@@ -145,8 +148,8 @@ class DNABertEmbedder(BaseEmbedder):
                         output.append(self.bert_model(chunk.to(device))[0].detach().cpu())
                     output = torch.cat(output, dim=1)
                 else:
-                    output = self.bert_model(model_input.to(device))
-                embedding = output[0].detach().cpu().numpy()
+                    output = self.bert_model(model_input.to(device))[0].detach().cpu().numpy()
+                embedding = output
 
                 if upsample_embeddings:
                     embedding = self._repeat_embedding_vectors(embedding)

@@ -3,9 +3,10 @@ defaults:
   - _self_
 hydra : 
   searchpath:
+    - pkg://conf
     - file://conf 
-task : chromatin_accessibility 
-embedder : hyenadna-tiny-1k
+task : histone_modification 
+embedder : dnabert2
 output_dir: ./downstream_tasks/${task}/${embedder}/
 model:
   _target_: bend.models.downstream.CNN
@@ -13,7 +14,7 @@ model:
   output_size: ${datadims.${task}}
   hidden_size: 64
   kernel_size: 3
-  output_downsample_window: 512
+  output_downsample_window : 512
 optimizer : 
   _target_ : torch.optim.AdamW 
   lr : 0.003
@@ -23,8 +24,8 @@ data:
   dir : ./data/
   data_dir : ${data.dir}/${task}/${embedder}/
   cross_validation : false
-  batch_size : 512
-  num_workers : 0
+  batch_size : 64
+  num_workers : 1
   padding_value : -100
   shuffle : 5000
   train_data : [train.tfrecord]

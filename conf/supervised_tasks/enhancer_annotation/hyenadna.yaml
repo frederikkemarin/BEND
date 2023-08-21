@@ -6,7 +6,7 @@ hydra :
     #- pkg://conf
     - file://conf 
 task : enhancer_annotation 
-embedder : onehot
+embedder : hyenadna-tiny-1k
 output_dir: ./downstream_tasks/${task}/${embedder}/split_${data.cross_validation}
 model:
   _target_: bend.models.downstream.CNN
@@ -22,7 +22,7 @@ optimizer :
   weight_decay: 0.01
 data:
   _target_: bend.utils.data_downstream.get_data
-  batch_size : 8
+  batch_size : 16
   num_workers : 0
   padding_value : -100
   shuffle : 500

@@ -7,12 +7,12 @@ import h5py
 
 # %%
 baseComplement = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A'}
-
-def has_header(file, nrows=20):
-    df = pd.read_csv(file, header=None, nrows=nrows, sep='\s+')
-    df_header = pd.read_csv(file, nrows=nrows, sep='\s+')
-    return tuple(df.dtypes) != tuple(df_header.dtypes)
-
+#
+#def has_header(file, nrows=20):
+#    df = pd.read_csv(file, header=None, nrows=nrows, sep='\t')
+#    df_header = pd.read_csv(file, nrows=nrows, sep='\t')
+#    return tuple(df.dtypes) != tuple(df_header.dtypes)
+#
 # %%
 def reverse_complement(dna_string):
     """Returns the reverse-complement for a DNA string."""
@@ -26,10 +26,9 @@ class Fasta():
     def __init__(self, fasta) -> None:
         self._fasta = pysam.FastaFile(fasta)
     
-    def fetch(self, chrom, start, end, strand='+', reverse = False):
-        sequence = self._fasta.fetch(chrom, start, end).upper()
-        if reverse:
-            sequence = sequence[::-1]
+    def fetch(self, chrom, start, end, strand='+'):
+        sequence = self._fasta.fetch(str(chrom), start, end).upper()
+        
         if strand == '+':
             pass
         elif strand == '-':
@@ -60,39 +59,37 @@ def embed_from_multilabled_bed_gen(bed, reference_fasta, embedder, label_column_
 
 
 def embed_from_bed(bed, reference_fasta, embedder, upsample_embeddings = False, 
-                  hdf5_file= None, read_strand = False, 
-                  read_reverse = False, label_column_idx=6, label_depth=None, split = None):
+                  hdf5_file= None, read_strand = False, label_column_idx=6, label_depth=None, split = None):
     fasta = Fasta(reference_fasta)
     # open hdf5 file 
     hdf5_file = h5py.File(hdf5_file, mode = "r") if hdf5_file else None
-    header = 'infer' if has_header(bed) else None
-    f = pd.read_csv(bed, header = header, sep = '\s+')
+    #header = 'infer' if has_header(bed) else None
+    f = pd.read_csv(bed, header = 'infer', sep = '\t')
     if split: 
         f = f[f.iloc[:, -1] == split]
 
     for n, line in tqdm.tqdm(f.iterrows()):
         # get bed row
         if read_strand:
-            chrom, start, end, strand, reverse = line[0], int(line[1]), int(line[2]), line[3], False
-        if read_reverse: 
-            chrom, start, end, strand, reverse = line[0], int(line[1]), int(line[2]), '+', bool(line[4])
+            chrom, start, end, strand = line[0], int(line[1]), int(line[2]), line[3]
         else:
-            chrom, start, end, strand, reverse = line[0], int(line[1]), int(line[2]), '+', False # strand wil not be reversed
+            chrom, start, end, strand = line[0], int(line[1]), int(line[2]), '+' 
         if hdf5_file is not None: 
             labels = hdf5_file['labels'][n]
         else: 
             labels = list(map(int, line[label_column_idx].split(',')))
             labels = multi_hot(labels, depth=label_depth)
         # get sequence
-        sequence = fasta.fetch(chrom, start, end, strand = strand, reverse = reverse) # categorical labels
+        sequence = fasta.fetch(chrom, start, end, strand = strand) # categorical labels
         # embed sequence
-        sequence_embed = tf.squeeze(tf.constant(embedder(sequence, upsample_embeddings = upsample_embeddings)))
+        sequence_embed = embedder(sequence, upsample_embeddings = upsample_embeddings)
+        sequence_embed = tf.squeeze(tf.constant(sequence_embed))
         yield {'inputs': sequence_embed, 'outputs': labels}
 
 
 def get_splits(bed):
-    header = 'infer' if has_header(bed) else None
-    f = pd.read_csv(bed, header = header, sep = '\s+')
+    #header = 'infer' if has_header(bed) else None
+    f = pd.read_csv(bed, header = 'infer', sep = '\t')
     splits = f.iloc[:, -1].unique().tolist() # splits should be in last column
     return splits
         
