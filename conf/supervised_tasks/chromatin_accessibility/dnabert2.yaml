@@ -20,8 +20,7 @@ optimizer :
   weight_decay: 0.01
 data:
   _target_: bend.utils.data_downstream.get_data
-  dir : /z/datasets/ds_er_etl/frma/data
-  data_dir : ${data.dir}/${task}/${embedder}/
+  data_dir : ./data/${task}/${embedder}/
   cross_validation : false
   batch_size : 64
   num_workers : 0
