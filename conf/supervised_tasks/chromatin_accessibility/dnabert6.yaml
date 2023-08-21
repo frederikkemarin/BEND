@@ -5,39 +5,39 @@ hydra :
   searchpath:
     #- pkg://conf
     - file://conf 
-task : enhancer_annotation 
-embedder : onehot
-output_dir: ./downstream_tasks/${task}/${embedder}/split_${data.cross_validation}
+task : chromatin_accessibility 
+embedder : dnabert6
+output_dir: ./downstream_tasks/${task}/${embedder}/
 model:
   _target_: bend.models.downstream.CNN
   input_size: ${datadims.${embedder}}
   output_size: ${datadims.${task}}
-  hidden_size: 2
+  hidden_size: 64
   kernel_size: 3
   upsample_factor: null
-  output_downsample_window: 128
 optimizer : 
   _target_ : torch.optim.AdamW 
-  lr : 0.001
+  lr : 0.003
   weight_decay: 0.01
 data:
   _target_: bend.utils.data_downstream.get_data
-  batch_size : 8
+  cross_validation : false
+  batch_size : 64
   num_workers : 0
   padding_value : -100
-  shuffle : 500
+  shuffle : 5000
   data_dir : ./data/${task}/${embedder}/
-  cross_validation : 1 # which split to run in the cross validation
+  train_data : [train.tfrecord]
+  valid_data : [valid.tfrecord]
+  test_data :  [test.tfrecord]
 params:
   epochs: 100
-  load_checkpoint: true
+  load_checkpoint: false
   mode: train
   gradient_accumulation_steps: 1
-  criterion: cross_entropy
-  class_weights:
-  - 1
-  - 82.86
-  metric : mcc
+  criterion: bce
+  class_weights: null
+  metric : auroc
   activation : none
 wandb:
   mode : disabled 

@@ -1,8 +1,14 @@
+defaults:
+  - datadims : [label_dims,embedding_dims]
+  - _self_
 hydra : 
   searchpath:
     - file://conf 
-data_dir : /z/datasets/ds_er_etl/frma/data/
+data_dir : ./data/
 embedders_dir : ./pretrained_models/
+splits : 
+  - valid 
+  - test
 models : 
   #- gena-lm-bigbird-base-t2t
   #- gena-lm-bert-large-t2
@@ -20,10 +26,10 @@ models :
   #- dnabert2
   #- onehot
 tasks : 
-  - gene_finding
+  #- gene_finding
   #- enhancer_annotation
   #- variant_effects
-  #- histone_modification
+  - histone_modification
   #- chromatin_accessibility
 # model instatiators 
 dnabert2:
@@ -87,19 +93,21 @@ enhancer_annotation:
   reference_fasta : ${data_dir}/genomes/GRCh38.primary_assembly.genome.fa
   hdf5_file : ${data_dir}/enhancer_annotation/enhancer_annotation.hdf5
   bed : ${data_dir}/enhancer_annotation/enhancer_annotation.bed
-
+  read_strand : false
 variant_effects:
   reference_fasta : ${data_dir}/genomes/GRCh38.primary_assembly.genome.fa
   bed : ${data_dir}/variant_effects/variant_effects.bed
   read_strand : false
 histone_modification:
-  bed : samples.Histone-ChIP.512.bed
+  bed : ${data_dir}/histone_modification/histone_modification.bed
   reference_fasta : ${data_dir}/genomes/GRCh38.primary_assembly.genome.fa
-  read_strand : false
+  read_strand : true
   hdf5_file : null
+  label_depth : ${datadims.histone_modification}
 chromatin_accessibility:
-  bed : samples.DNase-I.512.bed
+  bed : ${data_dir}/chromatin_accessibility/chromatin_accessibility.bed
   reference_fasta : ${data_dir}/genomes/GRCh37.no-chr.fa
-  read_strand : false
+  read_strand : true
   hdf5_file : null
+  label_depth : ${datadims.chromatin_accessibility}
 

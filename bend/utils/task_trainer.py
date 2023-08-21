@@ -9,6 +9,7 @@ from sklearn.metrics import matthews_corrcoef, roc_auc_score, average_precision_
 from sklearn.feature_selection import r_regression
 import pandas as pd
 from typing import Union
+import numpy as np
 
 class CrossEntropyLoss(nn.Module):
     def __init__(self, 
@@ -39,10 +40,15 @@ class PoissonLoss(nn.Module):
 class BCEWithLogitsLoss(nn.Module):
     def __init__(self):
         super(BCEWithLogitsLoss, self).__init__()
+        self.criterion = torch.nn.BCEWithLogitsLoss(reduction = 'none')
     
-    def forward(self, pred, target):
-        criterion = torch.nn.BCEWithLogitsLoss()
-        return criterion(pred.permute(0, 2, 1), target)
+    def forward(self, pred, target, padding_value = -100):
+        if pred.dim() == 3:
+            loss =  self.criterion(pred.permute(0, 2, 1), target.float())
+        else: 
+            loss = self.criterion(pred, target.float())
+        # remove loss for padded positions and return
+        return torch.mean(loss[~target != padding_value])
     
 class MSELoss(nn.Module):
     def __init__(self):
@@ -129,11 +135,21 @@ class BaseTrainer:
         Returns:
             metric: the metric value
         '''
+        # check if any padding in the target
+        if torch.any(y_true  == self.config.data.padding_value):
+            mask = y_true != self.config.data.padding_value
+            y_true = y_true[mask]
+            y_pred = y_pred[mask]
+
         if self.config.params.metric == 'mcc':
             metric =  matthews_corrcoef(y_true.numpy().ravel(), y_pred.numpy().ravel())
     
         elif self.config.params.metric == 'auroc':
-            metric = roc_auc_score(y_true.numpy().ravel(), y_pred.numpy().ravel(), average = 'macro') # flatten arrays to get pearsons r
+            if self.config.task == 'histone_modification' or self.config.task == 'chromatin_accessibility':
+                # save y_true and y_pred 
+                metric = roc_auc_score(y_true.numpy(), y_pred.numpy(), average = None)
+            else:
+                metric = roc_auc_score(y_true.numpy().ravel(), y_pred.numpy().ravel(), average = 'macro') # flatten arrays to get pearsons r
             
         elif self.config.params.metric == 'pearsonr':
             metric = r_regression(y_true.detach().numpy().reshape(-1,1), 
@@ -157,12 +173,12 @@ class BaseTrainer:
         '''
 
         checkpoints = [f for f in os.listdir(f'{self.config.output_dir}/checkpoints/') if f.endswith('.pt')]
-
         if len(checkpoints) == 0 or not load_checkpoint:
             print('No checkpoints found, starting from scratch')
             return 
         else:
             if isinstance(load_checkpoint, bool):
+                    print('Load latest checkpoint')
                     load_checkpoint = checkpoints[-1]
             elif isinstance(load_checkpoint, int):
                 load_checkpoint = f'epoch_{load_checkpoint}.pt'
@@ -190,7 +206,7 @@ class BaseTrainer:
         return train_loss
     
 
-               
+    
     def train(self, 
               train_loader, 
               val_loader, 
@@ -210,12 +226,13 @@ class BaseTrainer:
         start_epoch = 0
         checkpoint_path = self._get_checkpoint_path(load_checkpoint)
         if checkpoint_path:
-            start_epoch, train_loss, val_loss, val_metric = self._load_checkpoint(f'{self.config.output_dir}/checkpoints/{load_checkpoint}')
+            start_epoch, train_loss, val_loss, val_metric = self._load_checkpoint(checkpoint_path)
             print(f'Loaded checkpoint from epoch {start_epoch}, train loss: {train_loss}, val loss: {val_loss}, val {self.config.params.metric}: {val_metric}')
 
         for epoch in range(1+ start_epoch, epochs + 1):
             train_loss = self.train_epoch(train_loader)
             val_loss, val_metric = self.validate(val_loader)
+            val_metric = np.mean(val_metric)
             # save epoch in output dir
             self._save_checkpoint(epoch, train_loss, val_loss, val_metric)
             # log losses to csv
@@ -231,9 +248,10 @@ class BaseTrainer:
         with torch.autocast(device_type='cuda', dtype=torch.float16):
             output = self.model(data.to(self.device), length = target.shape[-1], 
                                 activation = self.config.params.activation) 
+            if self.config.task == 'chromatin_accessibility' or self.config.task == 'histone_modification':
+                output = output.squeeze(1)
             loss = self.criterion(output, target.to(self.device).long())
             loss = loss / self.gradient_accumulation_steps
-            
         # Accumulates scaled gradients.
         self.scaler.scale(loss).backward()
         if ((idx + 1) % self.gradient_accumulation_steps == 0) : #or (idx + 1 == len_dataloader):
@@ -257,19 +275,21 @@ class BaseTrainer:
         loss = 0
         outputs = []
         targets_all = []
-
         with torch.no_grad():
             for idx, (data, target) in enumerate(data_loader):
-                mask = target != self.config.data.padding_value
                 output = self.model(data.to(self.device), activation = self.config.params.activation)
+                if self.config.task == 'chromatin_accessibility' or self.config.task == 'histone_modification':
+                    output = output.squeeze(1)
+                    outputs.append(self.model.sigmoid(output).detach().cpu())
+                else: 
+                    outputs.append(torch.argmax(self.model.softmax(output), dim=-1).detach().cpu()) 
                 loss += self.criterion(output, target.to(self.device).long()).item()
-                outputs.append(torch.argmax(self.model.softmax(output), dim=-1)[mask].detach().cpu()) 
-                targets_all.append(target[mask].detach().cpu())  
+                targets_all.append(target.detach().cpu())  
 
         loss /= (idx + 1) 
         if save_output:
             torch.save({'targets': targets_all, 'outputs': outputs}, f'{self.config.output_dir}/test_set.torch')
-        
+        torch.save({'y_true': targets_all, 'y_pred' :outputs}, '/z/home/frma/test_output.torch')
         # compute metrics
         metric = self._calculate_metric(torch.cat(targets_all), 
                                           torch.cat(outputs))
@@ -294,12 +314,22 @@ class BaseTrainer:
         # load checkpoint
         print(f'{self.config.output_dir}/checkpoints/epoch_{int(checkpoint["Epoch"].iloc[0])}.pt')
         epoch, train_loss, val_loss, val_metric = self._load_checkpoint(f'{self.config.output_dir}/checkpoints/epoch_{int(checkpoint["Epoch"].iloc[0])}.pt')
-        print(f'Loaded checkpoint from epoch {epoch}, train loss: {train_loss:.3f}, val loss: {val_loss:.3f}, Val {self.config.params.metric}: {val_metric:.3f}')
+        print(f'Loaded checkpoint from epoch {epoch}, train loss: {train_loss:.3f}, val loss: {val_loss:.3f}, Val {self.config.params.metric}: {np.mean(val_metric):.3f}')
 
         # test
         loss, metric = self.validate(test_loader, save_output = False)
-        print(f'Test results : Loss {loss:.4f}, {self.config.params.metric} {metric:.4f}')
-        new_metrics = pd.DataFrame(data = [[loss, metric]], columns = ['test_loss', f'test_{self.config.params.metric}'])
+        # also save test metrics just in case 
+        f = open(f'{self.config.output_dir}/test_metrics_checkpoint{epoch}.txt', "a")
+        f.write(f'Epoch: {epoch} \nloss: {loss} \nmetric : {metric}\n')
+        f.close()
+        print(f'Test results : Loss {loss:.4f}, {self.config.params.metric} {metric.mean():.4f}')
+        if isinstance(metric, np.ndarray):
+            columns = ['test_loss', 'test_metric_avg'] +[f'test_{self.config.params.metric}_{n}' for n in range(len(metric))]
+            data = [[loss, np.mean(metric)] + list(metric)]
+        else:
+            data = [[loss, metric]]
+            columns = ['test_loss', f'test_{self.config.params.metric}']
+        new_metrics = pd.DataFrame(data = data, columns = columns)
         metrics = checkpoint.merge(new_metrics, how = 'cross')
 
         if not overwrite and os.path.exists(f'{self.config.output_dir}/best_model_metrics.csv'):
