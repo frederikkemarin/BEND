@@ -289,7 +289,6 @@ class BaseTrainer:
         loss /= (idx + 1) 
         if save_output:
             torch.save({'targets': targets_all, 'outputs': outputs}, f'{self.config.output_dir}/test_set.torch')
-        torch.save({'y_true': targets_all, 'y_pred' :outputs}, '/z/home/frma/test_output.torch')
         # compute metrics
         metric = self._calculate_metric(torch.cat(targets_all), 
                                           torch.cat(outputs))
