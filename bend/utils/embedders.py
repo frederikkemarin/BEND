@@ -615,7 +615,10 @@ class DNABert2Embedder(BaseEmbedder):
                 new_embeddings.append(embeddings[:, [idx]]) # (1, 768)
                 continue
             token_embedding = embeddings[:, [idx]] # (1, 768)
-            new_embeddings.extend([token_embedding] * len(token))
+            if token == '[UNK]':
+                new_embeddings.extend([token_embedding])
+            else:
+                new_embeddings.extend([token_embedding] * len(token))
 
         # list of (1,1, 768) arrays
         new_embeddings = np.concatenate(new_embeddings, axis=1)
