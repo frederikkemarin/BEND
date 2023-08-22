@@ -130,10 +130,12 @@ If desired, the config files can be modified to change parameters, output/input 
 For unsupervised prediction of variant effects, embeddings don't have to be precomputed and stored. Embeddings are generated and directly evaluated using
 
 ```bash
-python3 scripts/predict_variant_effects.py variant_effects.bed {output_file_name}.csv {model_type} {path_to_checkpoint} {path_to_reference_genome_fasta} --embedding_idx {position_of_embedding}
+python3 scripts/predict_variant_effects.py {variant_file_name}.bed {output_file_name}.csv {model_type} {path_to_checkpoint} {path_to_reference_genome_fasta} --embedding_idx {position_of_embedding}
 ```
 
-A notebook with an example of how to run the script and evaluate the results can be found in [examples/unsupervised_variant_effects.ipynb](notebooks/variant_effects.ipynb). To run all models, you can use the script [scripts/run_variant_effects.sh](scripts/run_variant_effects.sh).
+There are two variant effect prediction tasks available for `{variant_file_name}`: Variants with expression effect (eQTLs) in `variant_effects_expression.bed` and disease-causing variants in `variant_effects_disease.bed`.
+
+A notebook with an example of how to run the script and evaluate the results can be found in [examples/unsupervised_variant_effects.ipynb](examples/unsupervised_variant_effects.ipynb). To run all models, you can use the script [scripts/run_variant_effects.sh](scripts/run_variant_effects.sh).
 
 ------------
 ## Extending BEND

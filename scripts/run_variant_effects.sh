@@ -3,8 +3,8 @@
 
 # Run expression variants.
 OUT_DIR=results_variant_effects
-VARIANT_FILE=data/variant_effects/variant_effects_eqtl.bed
-OUT_PREFIX=variant_effects_eqtl
+VARIANT_FILE=data/variant_effects/variant_effects_expression.bed
+OUT_PREFIX=variant_effects_expression
 mkdir -p OUT_DIR
 
 python3 scripts/predict_variant_effects.py $VARIANT_FILE $OUT_DIR/${OUT_PREFIX}_dnabert_6.csv dnabert pretrained_models/dnabert/6-new-12w-0 data/genomes/GRCh38.primary_assembly.genome.fa --embedding_idx 254 --kmer 6 # index 254 has the variant at its 3rd position in the 6-mer
