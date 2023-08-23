@@ -67,13 +67,12 @@ def embed_from_bed(bed, reference_fasta, embedder, upsample_embeddings = False,
     f = pd.read_csv(bed, header = 'infer', sep = '\t')
     if split: 
         f = f[f.iloc[:, -1] == split]
-    label_column_idx = f.columns.get_loc("label") if 'label' in f.columns else label_column_idx
-    strand_column_index = f.columns.get_loc("strand") if 'strand' in f.columns else 3
+    
 
     for n, line in tqdm.tqdm(f.iterrows()):
         # get bed row
         if read_strand:
-            chrom, start, end, strand = line[0], int(line[1]), int(line[2]), line[strand_column_index]
+            chrom, start, end, strand = line[0], int(line[1]), int(line[2]), line[3]
         else:
             chrom, start, end, strand = line[0], int(line[1]), int(line[2]), '+' 
         if hdf5_file is not None: 
