@@ -3,7 +3,6 @@ defaults:
   - _self_
 hydra : 
   searchpath:
-    - pkg://conf
     - file://conf 
 task : gene_finding 
 embedder : dnabert2

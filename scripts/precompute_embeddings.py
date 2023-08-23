@@ -6,7 +6,7 @@ import bend.io.sequtils as sequtils
 import pandas as pd
 from bioio.tf import dataset_from_iterable
 from bioio.tf import dataset_to_tfrecord
-
+import sys
 # load config 
 @hydra.main(config_path="../conf/embedding/", config_name="embed", version_base=None)
 def run_experiment(cfg: DictConfig) -> None:
@@ -36,5 +36,7 @@ def run_experiment(cfg: DictConfig) -> None:
 
 
 if __name__ == '__main__':
+    
     print('Run Embedding')
+    
     run_experiment()

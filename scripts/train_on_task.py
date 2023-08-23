@@ -6,10 +6,12 @@ from omegaconf import DictConfig, OmegaConf
 import torch
 from  bend.utils.task_trainer import BaseTrainer,  MSELoss, BCEWithLogitsLoss, PoissonLoss, CrossEntropyLoss
 import wandb
+from bend.models.downstream import CustomDataParallel
 import os
+import sys
 
 # load config 
-@hydra.main(config_path="conf", config_name=None, version_base=None)
+@hydra.main(config_path=f"../conf/supervised_tasks/", config_name=None ,version_base=None) #
 def run_experiment(cfg: DictConfig) -> None:
     wandb.config = OmegaConf.to_container(
         cfg, resolve=True, throw_on_missing=True
@@ -28,8 +30,9 @@ def run_experiment(cfg: DictConfig) -> None:
     model = hydra.utils.instantiate(cfg.model).to(device).float()
     # put model on dataparallel
     if torch.cuda.device_count() > 1:
+        from bend.models.downstream import CustomDataParallel
         print("Let's use", torch.cuda.device_count(), "GPUs!")
-        model = torch.nn.DataParallel(model)
+        model = CustomDataParallel(model)
     print(model)
 
     # instantiate optimizer

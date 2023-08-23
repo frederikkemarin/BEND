@@ -84,11 +84,11 @@ class BaseTrainer:
     def _create_output_dir(self, path):
         os.makedirs(f'{path}/checkpoints/', exist_ok=True)
         if self.overwrite_dir or not os.path.exists(f'{path}/losses.csv'):
-            pd.DataFrame(columns = ['Epoch', 'train_loss', 'val_loss', f'val_{self.config.params.metric}']).to_csv(f'{path}/losses.csv')
+            pd.DataFrame(columns = ['Epoch', 'train_loss', 'val_loss', f'val_{self.config.params.metric}']).to_csv(f'{path}/losses.csv', index = False)
         return 
     
     def _load_checkpoint(self, checkpoint):
-        checkpoint = torch.load(checkpoint)
+        checkpoint = torch.load(checkpoint,  map_location=self.device)
         self.model.load_state_dict(checkpoint['model_state_dict'], strict=False)
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         epoch = checkpoint['epoch']
@@ -201,6 +201,7 @@ class BaseTrainer:
         self.model.train()
         train_loss = 0
         for idx, batch in enumerate(train_loader):
+            print('batch', idx)
             train_loss += self.train_step(batch, idx = idx)
         train_loss /= (idx +1)
         return train_loss
@@ -317,22 +318,20 @@ class BaseTrainer:
 
         # test
         loss, metric = self.validate(test_loader, save_output = False)
-        # also save test metrics just in case 
-        f = open(f'{self.config.output_dir}/test_metrics_checkpoint{epoch}.txt', "a")
-        f.write(f'Epoch: {epoch} \nloss: {loss} \nmetric : {metric}\n')
-        f.close()
-        print(f'Test results : Loss {loss:.4f}, {self.config.params.metric} {metric.mean():.4f}')
+        
+        print(f'Test results : Loss {loss:.4f}, {self.config.params.metric} {np.mean(metric):.4f}')
+        
         if isinstance(metric, np.ndarray):
-            columns = ['test_loss', 'test_metric_avg'] +[f'test_{self.config.params.metric}_{n}' for n in range(len(metric))]
+            columns = ['test_loss', f'test_{self.config.params.metric}_avg'] +[f'test_{self.config.params.metric}_{n}' for n in range(len(metric))]
             data = [[loss, np.mean(metric)] + list(metric)]
         else:
-            data = [[loss, metric]]
             columns = ['test_loss', f'test_{self.config.params.metric}']
-        new_metrics = pd.DataFrame(data = data, columns = columns)
-        metrics = checkpoint.merge(new_metrics, how = 'cross')
+            data = [[loss, metric]]
+            
+        metrics = checkpoint.merge(pd.DataFrame(data = data, columns = columns), how = 'cross')
 
         if not overwrite and os.path.exists(f'{self.config.output_dir}/best_model_metrics.csv'):
-            best_model_metrics = pd.read_csv(f'{self.config.output_dir}/best_model_metrics.csv') 
+            best_model_metrics = pd.read_csv(f'{self.config.output_dir}/best_model_metrics.csv', index_col = False) 
             # concat metrics to best model metrics
             metrics = pd.concat([best_model_metrics, metrics], ignore_index=True)
 
