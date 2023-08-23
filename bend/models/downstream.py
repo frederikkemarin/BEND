@@ -8,7 +8,14 @@ import torch.nn.functional as F
 import numpy as np
 from bend.models.dilated_cnn import ConvNetConfig, ConvNetModel, OneHotEmbedding
 
-
+class CustomDataParallel(torch.nn.DataParallel):
+    def __getattr__(self, name):
+        try:
+            return super().__getattr__(name)
+        except AttributeError:
+            return getattr(self.module, name)
+        
+        
 class TransposeLayer(nn.Module):
     def __init__(
         self,
@@ -145,7 +152,7 @@ class ConvNetForSupervised(nn.Module):
                                     kernel_size = kernel_size_downstream,
                                     upsample_factor = upsample_factor,
                                     output_downsample_window= output_downsample_window)
-
+        self.softmax =  nn.Softmax(dim = -1)
 
     def forward(self, x, activation = 'none', **kwargs):
         x = self.encoder(input_ids=x, **kwargs).last_hidden_state

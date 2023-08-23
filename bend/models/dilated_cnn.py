@@ -96,8 +96,6 @@ class ConvLayer(nn.Module):
         )
 
     def forward(self, x):
-        print('x shape', x.shape)
-        print('x conv shape', self.conv(x).shape)
         x = x + self.conv(x)
         x = x + self.ffn(x)
         return x

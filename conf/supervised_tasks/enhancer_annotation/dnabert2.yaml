@@ -3,7 +3,7 @@ defaults:
   - _self_
 hydra : 
   searchpath:
-    #- pkg://conf
+    #\\- pkg://conf
     - file://conf 
 task : enhancer_annotation 
 embedder : dnabert2
