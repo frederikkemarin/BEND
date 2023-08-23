@@ -2,6 +2,9 @@
 scripts/submit.sh
 # hydra logs
 outputs/
+data/
+downstream_tasks/
+submit.sh
 
 # Byte-compiled / optimized / DLL files
 **/__pycache__/
