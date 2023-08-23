@@ -37,7 +37,7 @@ To precompute the embeddings for all models and tasks, run :
 ```
 python scripts/precompute_embeddings.py 
 ```
-This script automatically calls the hydra config file at ```/conf/embeddings/embed.yaml```. 
+This script automatically calls the hydra config file at ```/../conf/embeddings/embed.yaml```. 
 
 To alter the tasks/model for which to compute the embeddings, please alter the ```tasks``` and/or the ```models``` list in the config file. 
 
@@ -85,16 +85,16 @@ The embeddings should afterwards be located in `BEND/data/{task_name}/{embedder}
 
 To run a runstream task run (from `BEND/`):
 ```
-python scripts/train_on_task.py --config-path conf/supervised_tasks/{task_name}/ --config-name {embedder}
+python scripts/train_on_task.py --config-path ../conf/supervised_tasks/{task_name}/ --config-name {embedder}
 ```
 E.g. to run gene finding on the ResNet-LM embeddings the commandline is then:
 ```
-python scripts/train_on_task.py --config-path conf/supervised_tasks/gene_finding/ --config-name resnetlm
+python scripts/train_on_task.py --config-path ../conf/supervised_tasks/gene_finding/ --config-name resnetlm
 ```
 
 Specifically for running the enhancer annotation task, to run all 10 cross validation folds, run: 
 ```
-python scripts/train_on_task.py --config-path conf/supervised_tasks/enhancer_annotation/ --config-name resnetlm --multirun data.cross_validation=1,2,3,4,5,6,7,8,9,10
+python scripts/train_on_task.py --config-path ../conf/supervised_tasks/enhancer_annotation/ --config-name resnetlm --multirun data.cross_validation=1,2,3,4,5,6,7,8,9,10
 ```
 This will execute a [multirun with hydra](https://hydra.cc/docs/tutorials/basic/running_your_app/multi-run/) which ensures that the script is run once for each cross validation configuration. 
 The full list of current task names are : 
@@ -116,7 +116,7 @@ And the list of available embedders/models used for training on the tasks are :
 - `onehot`
 - `nt_transformer_1000g`
 
-The `train_on_task.py` script calls a trainer class `bend.utils.task_trainer`. All configurations required to adapt these 2 scripts to train on a specific task (input data, downstream model, parameters, evaluation metric etc.) are specified in the task specific [hydra](https://hydra.cc/docs/intro/) config files stored in the [conf](conf/) directory. This minimizes the changes required to the scripts in order to introduce a potential new task. 
+The `train_on_task.py` script calls a trainer class `bend.utils.task_trainer`. All configurations required to adapt these 2 scripts to train on a specific task (input data, downstream model, parameters, evaluation metric etc.) are specified in the task specific [hydra](https://hydra.cc/docs/intro/) config files stored in the [conf](../conf/) directory. This minimizes the changes required to the scripts in order to introduce a potential new task. 
 
 The results of a run can be found at :
 ```
@@ -145,7 +145,7 @@ A notebook with an example of how to run the script and evaluate the results can
 All embedders are defined in [bend/utils/embedders.py](bend/utils/embedders.py) and inherit `BaseEmbedder`. A new embedder needs to implement `load_model`, which should set up all required attributes of the class and handle loading the model checkpoint into memory. It also needs to implement `embed`, which takes a list of sequences, and returns a list of embedding matrices formatted as numpy arrays. The `embed` method should be able to handle sequences of different lengths.
 
 ### Adding a new task
-As the first step, the data for a new task needs to be formatted in the [bed-based format](#1-data-format). If necessary, a `split` and `label` column should be included. The next step is to add new config files to `conf/supervised_tasks`. You should create a new directory named after the task, and add a config file for each embedder you want to evaluate. The config files should be named after the embedder.
+As the first step, the data for a new task needs to be formatted in the [bed-based format](#1-data-format). If necessary, a `split` and `label` column should be included. The next step is to add new config files to `../conf/supervised_tasks`. You should create a new directory named after the task, and add a config file for each embedder you want to evaluate. The config files should be named after the embedder.
 
 
 -------------
