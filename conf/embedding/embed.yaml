@@ -7,6 +7,7 @@ hydra :
 data_dir : ./data/
 embedders_dir : ./pretrained_models/
 splits : 
+  - train
   - valid 
   - test
 models : 
