@@ -4,13 +4,13 @@ bend.models package
 Submodules
 ----------
 
-bend.models.awd\_lstm module
-----------------------------
+.. bend.models.awd\_lstm module
+.. ----------------------------
 
-.. automodule:: bend.models.awd_lstm
-   :members:
-   :undoc-members:
-   :show-inheritance:
+.. .. automodule:: bend.models.awd_lstm
+..    :members:
+..    :undoc-members:
+..    :show-inheritance:
 
 bend.models.dilated\_cnn module
 -------------------------------
@@ -20,21 +20,21 @@ bend.models.dilated\_cnn module
    :undoc-members:
    :show-inheritance:
 
-bend.models.dnabert2 module
----------------------------
+.. bend.models.dnabert2 module
+.. ---------------------------
 
-.. automodule:: bend.models.dnabert2
-   :members:
-   :undoc-members:
-   :show-inheritance:
+.. .. automodule:: bend.models.dnabert2
+..    :members:
+..    :undoc-members:
+..    :show-inheritance:
 
-bend.models.dnabert2\_padding module
-------------------------------------
+.. bend.models.dnabert2\_padding module
+.. ------------------------------------
 
-.. automodule:: bend.models.dnabert2_padding
-   :members:
-   :undoc-members:
-   :show-inheritance:
+.. .. automodule:: bend.models.dnabert2_padding
+..    :members:
+..    :undoc-members:
+..    :show-inheritance:
 
 bend.models.downstream module
 -----------------------------
@@ -44,21 +44,21 @@ bend.models.downstream module
    :undoc-members:
    :show-inheritance:
 
-bend.models.gena\_lm module
----------------------------
+.. bend.models.gena\_lm module
+.. ---------------------------
 
-.. automodule:: bend.models.gena_lm
-   :members:
-   :undoc-members:
-   :show-inheritance:
+.. .. automodule:: bend.models.gena_lm
+..    :members:
+..    :undoc-members:
+..    :show-inheritance:
 
-bend.models.hyena\_dna module
------------------------------
+.. bend.models.hyena\_dna module
+.. -----------------------------
 
-.. automodule:: bend.models.hyena_dna
-   :members:
-   :undoc-members:
-   :show-inheritance:
+.. .. automodule:: bend.models.hyena_dna
+..    :members:
+..    :undoc-members:
+..    :show-inheritance:
 
 Module contents
 ---------------

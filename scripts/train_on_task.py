@@ -1,5 +1,7 @@
 '''
-Only train the downstream model on the embeddings 
+train_on_task.py
+----------------
+Train a model on a downstream task.
 '''
 import hydra 
 from omegaconf import DictConfig, OmegaConf
@@ -13,6 +15,15 @@ import sys
 # load config 
 @hydra.main(config_path=f"../conf/supervised_tasks/", config_name=None ,version_base=None) #
 def run_experiment(cfg: DictConfig) -> None:
+    """
+    Run a supervised task experiment.
+    This function is called by hydra.
+    
+    Parameters
+    ----------
+    cfg : DictConfig
+        Hydra configuration object.
+    """
     wandb.config = OmegaConf.to_container(
         cfg, resolve=True, throw_on_missing=True
         )

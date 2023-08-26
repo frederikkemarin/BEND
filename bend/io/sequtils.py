@@ -1,3 +1,6 @@
+"""
+Utilities for processing genome coordinate-based sequence data to embeddings.
+"""
 import tqdm
 import tensorflow as tf
 import pysam
@@ -14,8 +17,21 @@ baseComplement = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A'}
 #    return tuple(df.dtypes) != tuple(df_header.dtypes)
 #
 # %%
-def reverse_complement(dna_string):
-    """Returns the reverse-complement for a DNA string."""
+def reverse_complement(dna_string: str):
+    # """Returns the reverse-complement for a DNA string."""
+    """
+    Returns the reverse-complement for a DNA string.
+    
+    Parameters
+    ----------
+    dna_string : str
+        DNA string to reverse-complement.
+        
+    Returns
+    -------
+    str
+        Reverse-complement of the input DNA string.
+    """
 
     complement = [baseComplement.get(base, 'N') for base in dna_string]
     reversed_complement = reversed(complement)
@@ -23,10 +39,40 @@ def reverse_complement(dna_string):
 
 # %%
 class Fasta():
+    """Class for fetching sequences from a reference genome fasta file."""
     def __init__(self, fasta) -> None:
+        """
+        Initialize a Fasta object for fetching sequences from a reference genome fasta file.
+        
+        Parameters
+        ----------
+        fasta : str
+            Path to a reference genome fasta file.
+        """
+        
         self._fasta = pysam.FastaFile(fasta)
     
-    def fetch(self, chrom, start, end, strand='+'):
+    def fetch(self, chrom: str, start: int, end: int, strand: str = '+') -> str:
+        """
+        Fetch a sequence from the reference genome fasta file.
+
+        Parameters
+        ----------
+        chrom : str
+            Chromosome name.
+        start : int
+            Start coordinate.
+        end : int
+            End coordinate.
+        strand : str, optional
+            Strand. The default is '+'.
+            If strand is '-', the sequence will be reverse-complemented before returning.
+        
+        Returns
+        -------
+        str
+            Sequence from the reference genome fasta file.
+        """
         sequence = self._fasta.fetch(str(chrom), start, end).upper()
         
         if strand == '+':
@@ -40,6 +86,28 @@ class Fasta():
 
 # %%
 def embed_from_multilabled_bed_gen(bed, reference_fasta, embedder, label_column_idx, label_depth):
+    """
+    Embed sequences from a bed file and multi-hot encode labels.
+
+    Parameters
+    ----------
+    bed : str
+        Path to a bed file.
+    reference_fasta : str
+        Path to a reference genome fasta file.
+    embedder : function
+        Function for embedding a sequence.
+    label_column_idx : int
+        Index of the column containing the labels.
+    label_depth : int
+        Number of labels.
+
+    Yields
+    ------
+    dict
+        Dictionary containing the embedded sequence and multi-hot encoded labels.
+        Keys are 'inputs' and 'outputs'.
+    """
     fasta = Fasta(reference_fasta)
     with open(bed) as f:
         for line in tqdm.tqdm(f):

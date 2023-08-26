@@ -9,6 +9,9 @@ Welcome to BEND's documentation!
 .. automodule:: bend.models
     :members:
 
+.. automodule:: bend.utils
+    :members:
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
