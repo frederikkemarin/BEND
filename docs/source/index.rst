@@ -28,6 +28,7 @@ The BEND codebase serves three purposes:
 
    hydra
    bend.utils.embedders
+   adding_embedders
    bend.models
 
 
