@@ -2,12 +2,13 @@ Adding new embedders
 ====================
 
 
-BEND features Embedder classes for a variety of available DNA LMs. DNA LMs are very heterogenous in terms of their
-model loading and inference APIs. To add a new DNA LM to BEND, you need to implement a new Embedder class in  ``bend.utils.embedders.py`` that
+BEND features embedder classes for a variety of available DNA LMs. DNA LMs are very heterogenous in terms of their
+model loading and inference APIs. The embedder classes provide a unified interface for computing embeddings directly from DNA sequence strings.
+To add a new DNA LM to BEND, you need to implement a new Embedder class in  ``bend.utils.embedders.py`` that
 
-1. Inherits from the `Embedder` class in ``bend.utils.embedders.BaseEmbedder``
-2. Implements the `load_model` method
-3. Implements the `embed` method 
+1. Inherits from the :class:`~bend.utils.embedders.BaseEmbedder` class in :mod:`~bend.utils.embedders`
+2. Implements the ``load_model`` method
+3. Implements the ``embed`` method 
 4. If necessary, add model source files to the ``bend.models`` directory. This is only necessary if the model implementation cannot be pip installed and imported as a python module directly.
 
 

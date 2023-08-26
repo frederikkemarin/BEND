@@ -1,4 +1,6 @@
 """
+sequtils.py
+===========
 Utilities for processing genome coordinate-based sequence data to embeddings.
 """
 import tqdm

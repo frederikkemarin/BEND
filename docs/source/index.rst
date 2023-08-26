@@ -27,6 +27,7 @@ The documentation covers the BEND codebase and includes instructions on how to e
    adding_embedders
    bend.models
    bend.utils
+   bend.io
 
 
 .. automodule:: bend.models
@@ -36,7 +37,8 @@ The documentation covers the BEND codebase and includes instructions on how to e
     :members:
     :no-index: embedders
 
-
+.. automodule:: bend.io
+    :members:
 
 
 Indices and tables

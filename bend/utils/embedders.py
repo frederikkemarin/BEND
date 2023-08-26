@@ -8,10 +8,10 @@ They also handle removal of special tokens, and optionally upsample the embeddin
 
 Embedders can be used as follows. Please check the individual classes for more details on the arguments.
 
-`embedder = EmbedderClass(model_name, some_additional_config_argument=6)`
+``embedder = EmbedderClass(model_name, some_additional_config_argument=6)``
 
-`embedding = embedder(sequence, remove_special_tokens=True, upsample_embeddings=True)`
-```
+``embedding = embedder(sequence, remove_special_tokens=True, upsample_embeddings=True)``
+
 '''
 
 

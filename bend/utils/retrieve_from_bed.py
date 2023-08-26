@@ -4,8 +4,11 @@ retrieve_from_bed.py
 Class to extract sequences from a reference genome using a `bed` file of genomic coordinates.
 
 Example
-get_dna = Annotation(annotation = 'path/to/bed/file', reference_genome = '/path/to/genome/fasta')
-get_dna.get_dna_segment(index = 0) # will return the dna segment for index 0 in the annotation file
+
+``get_dna = Annotation(annotation = 'path/to/bed/file', reference_genome = '/path/to/genome/fasta')``
+
+``get_dna.get_dna_segment(index = 0) # will return the dna segment for index 0 in the annotation file``
+
 '''
 from Bio import SeqIO
 import pandas as pd
