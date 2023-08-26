@@ -7,4 +7,4 @@ bend.utils.embedders module
    :members:
    :undoc-members:
    :show-inheritance:
-   :exclude-members: embed_awdlstm, embed_convnet, embed_dnabert, embed_gpn, embed_nucleotide_transformer, embed_sequence
+   :exclude-members: embed_awdlstm, embed_convnet, embed_dnabert, embed_gpn, embed_nucleotide_transformer, embed_sequence, EncodeSequence

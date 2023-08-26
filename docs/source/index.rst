@@ -3,15 +3,17 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to BEND's documentation!
-================================
+Welcome to 🧬 BEND's documentation!
+===================================
 
-`BEND <https://github.com/frederikkemarin/BEND/>`_ is a benchmark collection for evaluating the performance of DNA language models (LMs).
+`BEND <https://github.com/frederikkemarin/BEND/>`_ is a **Ben**\ chmark collection for evaluating the performance of **D**\ NA language models (LMs).
 The BEND codebase serves three purposes:
 
-* Providing a unified interface for computing embeddings from pretrained DNA LMs.
-* Extracting sequences from reference genomes using coordinates listed in bed files, and computing embeddings for these sequences for training and evaluating DNA LMs.
-* Training lightweight supervised CNN models that use DNA LM embeddings as input, and evaluating their performance on a variety of tasks.
+* Providing a **unified interface for computing embeddings** from pretrained DNA LMs.
+
+* **Extracting sequences from reference genomes using coordinates** listed in bed files, and computing embeddings for these sequences for training and evaluating models.
+
+* **Training lightweight supervised CNN models** that use **DNA LM embeddings** as input, and evaluating their performance on a variety of tasks.
 
 
 The documentation covers the BEND codebase and includes instructions on how to extend it to new LMs and tasks. For a tutorial on how to run BEND on existing tasks, please refer to the 

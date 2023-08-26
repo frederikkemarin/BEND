@@ -461,7 +461,7 @@ class AWDLSTMEmbedder(BaseEmbedder):
                 # embeddings.append(embedding.detach().cpu().numpy()[:,1:])
             
         return embeddings
-    
+
 class ConvNetEmbedder(BaseEmbedder):
     """
     Embed using the GPN-inspired ConvNet baseline LM trained in BEND.
