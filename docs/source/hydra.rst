@@ -2,7 +2,7 @@ Configuring BEND using hydra
 ============================
 
 BEND's embedding generation, model training and evaluation workflow is configured
-using `hydra <https://hydra.cc/>`_ .
+using `hydra <https://hydra.cc/>`_.
 
 If you want to extend BEND to either use a different model for embedding generation, or train
 supervised models on new tasks and datasets, you can do so by creating new Hydra configuration files.
@@ -15,9 +15,8 @@ This is required for the code to function correclty.
 Running new embedders
 *********************
 
-First, an embedder needs to be implemented as laid out in the tutorial on adding new embedders. To run a new embedder on tasks, you should extend the `conf/embedding/embed.yaml <https://github.com/frederikkemarin/BEND/tree/main/conf/embedding/embed.yaml>`_ file. 
-In order to add the new embedder, and embedder class must be used. 
-The configuration for the new embedder class is added to the conf/embedding/embed.yaml file following this example (the values can of course be modified):
+First, an embedder needs to be implemented as laid out in the tutorial on adding new embedders. To run a new embedder on tasks, you should extend the `conf/embedding/embed.yaml <https://github.com/frederikkemarin/BEND/tree/main/conf/embedding/embed.yaml>`_ file following the example below.
+This config file is used by the ``precompute_embeddings.py`` script to generate embeddings for the different tasks, as shown in the GitHub README.
 
 .. code-block::
 
@@ -27,8 +26,10 @@ The configuration for the new embedder class is added to the conf/embedding/embe
     arg_2 : value_2
  
 The ``embedder_name`` will be the name under which the embeddings are saved in the output directory (``data/task_name/embedder_name/``).
-The `arg_1` and `arg_2` are arguments that are passed to the ``NewEmbedderClass`` when it is initialized, these arguments and their values are dependent on the ``load_model`` method of
-the embedding class. E.g. typically, ``arg_1`` will be a name or path of the model. ``arg_2`` could be e.g. a configuration argument of the tokenizer. Most embedders only need a name/path.
+The ``arg_1`` and ``arg_2`` are arguments that are passed to the ``NewEmbedderClass`` when it is initialized, these arguments and their 
+values are dependent on the ``load_model`` method of
+the embedding class. Only ``_target_`` is required by the config file, any other arguments are optional to specify.
+E.g. typically, ``arg_1`` will be a name or path of the model. ``arg_2`` could be e.g. a configuration argument of the tokenizer. Most embedders only need a name/path.
 
 The ``embedder_name`` must also be added in the `conf/embedding/embed.yaml <https://github.com/frederikkemarin/BEND/tree/main/conf/embedding/embed.yaml>`_ under ``models``:
 
