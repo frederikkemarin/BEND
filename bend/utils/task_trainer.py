@@ -342,15 +342,6 @@ class BaseTrainer:
               val_loader, 
               epochs, 
               load_checkpoint: Union[bool, int] = True):
-        # '''
-        # Training
-        # Args:
-        #     train_loader: the training data loader
-        #     val_loader: the validation data loader
-        #     epochs: number of epochs to train for
-        #     load_checkpoint: if true, load latest checkpoint and continue training, if int, 
-        #                     load checkpoint from that epoch and continue training
-        # '''
         """
         Performs the full training routine.
         

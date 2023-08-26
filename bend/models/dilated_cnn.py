@@ -1,10 +1,9 @@
-'''
 """
 dilated_cnn.py
 ====================================
 A ResNet with dilated convolutions masked language model.
 code from https://github.com/songlab-cal/gpn
-'''
+"""
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

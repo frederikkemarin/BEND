@@ -642,7 +642,6 @@ class GENALMEmbedder(BaseEmbedder):
 class HyenaDNAEmbedder(BaseEmbedder):
     '''Embed using the HyenaDNA model https://arxiv.org/abs/2306.15794'''
     def load_model(self, model_path = 'pretrained_models/hyenadna/hyenadna-tiny-1k-seqlen', **kwargs):
-        
         # '''Load the model from the checkpoint path
         # 'hyenadna-tiny-1k-seqlen'   
         # 'hyenadna-small-32k-seqlen'
@@ -661,8 +660,9 @@ class HyenaDNAEmbedder(BaseEmbedder):
             If the path does not exist, the model will be downloaded from HuggingFace. Rather than just downloading the model,
             HyenaDNA's `from_pretrained` method relies on cloning the HuggingFace-hosted repository, and using git lfs to download the model.
             This requires git lfs to be installed on your system, and will fail if it is not.
+
         
-            """
+        """
         checkpoint_path, model_name = os.path.split(model_path)
         max_lengths = {
             'hyenadna-tiny-1k-seqlen': 1024,

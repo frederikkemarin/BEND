@@ -67,11 +67,11 @@ def worker_init_fn(self, _):
     Initialize worker function for data loading to make sure that each worker loads a different part of the data.
     See the pytorch data loading documentation for more information.
     """
-        worker_info = torch.utils.data.get_worker_info()
-        dataset = worker_info.dataset
-        worker_id = worker_info.id
-        split_size = len(dataset.data) //worker_info.num_workers
-        dataset.data = dataset.data[worker_id * split_size:(worker_id +1) * split_size]
+    worker_info = torch.utils.data.get_worker_info()
+    dataset = worker_info.dataset
+    worker_id = worker_info.id
+    split_size = len(dataset.data) //worker_info.num_workers
+    dataset.data = dataset.data[worker_id * split_size:(worker_id +1) * split_size]
 
 
 
@@ -119,21 +119,7 @@ def get_data(data_dir : str,
              padding_value = -100, 
              shuffle : int = None, 
              **kwargs):
-    # """
-    # Function to get data from tfrecords. 
-    # Args: 
-    #     data_dir: path to data directory containing the tfrecords
-    #     train_data: path to train tfrecord, in case of cross validation can give simply the path to the data directory
-    #     valid_data: path to valid tfrecord
-    #     test_data: path to test tfrecord
-    #     cross_validation: bool/int, if int, use the given partition as test set, 
-    #                                 +1 as valid set and the rest as train set.
-    #                                 First split is 1.
-    #     batch_size: int, batch size
-    #     num_workers: int, number of workers for dataloader
-    #     padding_value: int, value to pad sequences to longest sequence
-    #     shuffle: int, shuffle value for the train dataloader
-    # """
+
     """
     Function to get data from tfrecords.
     
