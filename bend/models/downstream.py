@@ -1,5 +1,10 @@
 '''
-Supervised models to be trained on embedded or one-hot encoded sequences.
+downstream.py
+====================================
+This module contains the implementations of the supervised models used in the paper.
+
+- :class:`~bend.models.downstream.ConvNetForSupervised`: a ResNet that we train as baseline model on one-hot encodings, if no dedicated baseline architecture is available for a task.
+- :class:`~bend.models.downstream.CNN`: a two-layer CNN used for all downstream tasks.
 '''
 from typing import Union
 import torch 
@@ -9,7 +14,12 @@ import numpy as np
 from bend.models.dilated_cnn import ConvNetConfig, ConvNetModel, OneHotEmbedding
 
 class CustomDataParallel(torch.nn.DataParallel):
+    """
+    A custom DataParallel class that allows for attribute access to the
+    wrapped module.
+    """
     def __getattr__(self, name):
+        """Forward attribute access to the module."""
         try:
             return super().__getattr__(name)
         except AttributeError:
@@ -17,24 +27,50 @@ class CustomDataParallel(torch.nn.DataParallel):
         
         
 class TransposeLayer(nn.Module):
+    """A layer that transposes the input."""
     def __init__(
         self,
     ):
         super().__init__()
 
     def forward(self, x):
+        """
+        Transpose the input.
+
+        Parameters
+        ----------
+        x: torch.Tensor
+            Input tensor.
+
+        Returns
+        -------
+        torch.Tensor
+            Transposed tensor.
+        """
         x = torch.transpose(x, 1, 2)
         return x
     
    
 class UpsampleLayer(nn.Module):
+    """
+    A layer that upsamples the input along the sequence dimension.
+    This is useful when a position in the input sequence corresponds to
+    multiple positions in the output sequence. The one-to-n mapping
+    needs to be a fixed factor.
+    """
 
     def __init__(self, scale_factor=6, input_size = 2560):
-        '''
-        Upsample the length of a sequence by scale_factor.
-        input dim (batch_size, length, embedding_size)
-        output_dim (batch_size, length * scale_factor, embedding_size)
-        '''
+        """
+        Build an upsampling layer.
+        
+        Parameters
+        ----------
+        scale_factor: int
+            The factor by which to upsample the input.
+
+        input_size: int
+            The embedding size of the input sequence.
+        """
         super(UpsampleLayer, self).__init__()
         self.scale_factor = scale_factor
         self.input_size = input_size
@@ -45,23 +81,52 @@ class UpsampleLayer(nn.Module):
                                                  align_corners = False), 
                                      TransposeLayer())
 
-    
     def forward(self, x):
+        """
+        Upsample the input.
+
+        Parameters
+        ----------
+        x: torch.Tensor
+            Input tensor. Should have shape (batch_size, length, embedding_size).
+
+        Returns
+        -------
+        torch.Tensor
+            Upsampled tensor. Has shape (batch_size, length * scale_factor, embedding_size).
+        """
         x = self.upsample(x)
         return x #torch.reshape(x, (x.shape[0], -1, self.input_size))
     
 class CNN(nn.Module):
-    '''
-        Two layer CNN with step size 1, Relu activation,
-        Finish with linear layer to output size per position
-        output should be same length as input
-    '''
+    """
+    A two-layer CNN with step size 1, ReLU activation, and a linear layer.
+    """
     def __init__(self, input_size = 5, output_size = 2, 
                  hidden_size = 64, 
                  kernel_size=3, 
                  upsample_factor : Union[bool, int] = False, 
                  output_downsample_window = None,
                  *args, **kwargs):
+        """
+        Build a two-layer CNN with step size 1, ReLU activation, and a linear layer.
+
+        Parameters
+        ----------
+        input_size: int
+            The embedding size of the input sequence.
+        output_size: int
+            The size of the output sequence.
+        hidden_size: int
+            The embedding size of the hidden layer.
+        kernel_size: int
+            The kernel size of the convolutional layers.
+        upsample_factor: int
+            The factor by which to upsample the input.
+        output_downsample_window: int
+            The window size for downsampling the output along the sequence dimension.
+            This is done by taking the average of the output values in the window.
+        """
         super(CNN, self).__init__()
         self.output_size = output_size
         self.onehot_embedding = OneHotEmbedding(input_size)
@@ -89,6 +154,24 @@ class CNN(nn.Module):
         self.sigmoid = nn.Sigmoid()
         
     def forward(self, x, activation = 'none', length = None):
+        """
+        Forward pass of the CNN.
+
+        Parameters
+        ----------
+        x: torch.Tensor
+            Input tensor. Should have shape (batch_size, length, embedding_size).
+        activation: str
+            The activation function to use. Can be 'softmax', 'softplus', 'sigmoid', or 'none'.
+        length: int
+            The actual length (in nucleotides) of the input sequence. Only required when embedding upsampling is used.
+        Returns
+        -------
+        torch.Tensor
+            Output tensor. Has shape (batch_size, output_length, output_size).
+            output_length is determined by the input length, the upsampling factor, and the output downsampling window.
+
+        """
         x = self.onehot_embedding(x)
         if hasattr(self, 'upsample'):
             x = self.upsample(x)[:, :length]
@@ -115,6 +198,11 @@ class CNN(nn.Module):
 
 
 class ConvNetForSupervised(nn.Module):
+    """
+    A convolutional neural network for supervised learning.
+    We use this as a baseline, when no dedicated supervised model
+    for a particular task is available.
+    """
     def __init__(
         self,
         hidden_size=256,
@@ -132,6 +220,39 @@ class ConvNetForSupervised(nn.Module):
         output_downsample_window = None,
         **kwargs, 
     ):
+        """
+        Build a convolutional neural network for supervised learning.
+
+        Parameters
+        ----------
+        hidden_size: int
+            The size of the hidden layers.
+        vocab_size: int
+            The size of the input embeddings. This is called  `vocab_size` because in the one-hot encoding 
+            case, the embedding size will be equal to the size of the vocabulary.
+        n_layers: int
+            The number of convolutional layers.
+        kernel_size: int
+            The kernel size of the convolutional layers.
+        dilation_double_every: int
+            The number of layers after which to double the dilation rate.
+        dilation_max: int
+            The maximum dilation rate.
+        dilation_cycle: int
+            The number of layers after which to reset the dilation rate to 1.
+        output_size: int
+            The size of the output sequence.
+        hidden_size_downstream: int
+            The embedding size of the hidden layer in the downstream CNN.
+        kernel_size_downstream: int
+            The kernel size of the convolutional layers in the downstream CNN.
+        upsample_factor: int
+            The factor by which to upsample the input.
+        output_downsample_window: int
+            The window size for downsampling the output along the sequence dimension.
+            This is done by taking the average of the output values in the window.
+        """
+
         
         super().__init__()
         self.config = ConvNetConfig(vocab_size=vocab_size, 
@@ -155,6 +276,22 @@ class ConvNetForSupervised(nn.Module):
         self.softmax =  nn.Softmax(dim = -1)
 
     def forward(self, x, activation = 'none', **kwargs):
+        """
+        Forward pass of the model.
+
+        Parameters
+        ----------
+        x: torch.Tensor
+            Input tensor. Should have shape (batch_size, length, vocab_size).
+        activation: str
+            The activation function to use. Can be 'softmax', 'softplus', 'sigmoid', or 'none'.
+        Returns
+        -------
+        torch.Tensor
+            Output tensor. Has shape (batch_size, output_length, output_size).
+            output_length is determined by the input length, the upsampling factor, and the output downsampling window.
+
+        """
         x = self.encoder(input_ids=x, **kwargs).last_hidden_state
         x = self.downstream_cnn(x, activation = activation)
 

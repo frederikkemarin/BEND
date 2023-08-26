@@ -74,6 +74,19 @@ label_dict = {'labels_simple_direction_DA' :
 
 
 def count_nucleotides(fasta, destination = None):
+    '''Count occurence of each nucleotide in fasta file.
+    Parameters
+    ----------
+    fasta : str
+        Path to fasta file.
+    destination : str, optional
+        Path to save dictionary with counts, by default None
+    Returns
+    -------
+    counts : dict
+        Dictionary with counts.
+    '''
+
     fasta = SeqIO.parse(open(fasta),'fasta')
     counts = {}
     for record in fasta: 
@@ -93,6 +106,13 @@ def count_nucleotides(fasta, destination = None):
 
 class EncodeSequence:
     def __init__(self, nucleotide_categories = categories_4_letters_unknown):
+        """
+        Encode or decode sequence into integers, onehot or string.
+        Parameters
+        ----------
+        nucleotide_categories : list
+            List with nucleotide categories, by default categories_4_letters_unknown
+        """
         
         self.nucleotide_categories = nucleotide_categories
         
@@ -100,6 +120,19 @@ class EncodeSequence:
         
     
     def transform_integer(self, sequence, return_onehot = False): # integer/onehot encode sequence
+        """
+        Encode string nucleotide sequence into integers or onehot.
+        Parameters
+        ----------
+        sequence : str, list, np.ndarray
+            Sequence to encode.
+        return_onehot : bool, optional
+            Return onehot encoded sequence, by default False
+        Returns
+        -------
+        sequence : np.ndarray
+            Encoded sequence.
+        """
         if isinstance(sequence, np.ndarray):
             return sequence
         if isinstance(sequence[0], str):  # if input is str 
@@ -112,6 +145,17 @@ class EncodeSequence:
         return sequence
     
     def inverse_transform_integer(self, sequence):
+        """
+        Decode integer encoded sequence into string.
+        Parameters
+        ----------
+        sequence : np.ndarray
+            Encoded sequence.
+        Returns
+        -------
+        sequence : str
+            Decoded sequence.
+        """
         if isinstance(sequence, str): # if input is str
             return sequence
         sequence = EncodeSequence.reduce_last_dim(sequence) # reduce last dim
@@ -120,6 +164,17 @@ class EncodeSequence:
     
     @staticmethod
     def reduce_last_dim(sequence):
+        """
+        Reduce last dimension of sequence.
+        Parameters
+        ----------
+        sequence : np.ndarray
+            Sequence to reduce last dimension.
+        Returns
+        -------
+        sequence : np.ndarray
+            Sequence with reduced last dimension.
+        """
         if isinstance(sequence, (str, list)): # if input is str
             return sequence
         if len(sequence.shape) > 1:
@@ -128,120 +183,3 @@ class EncodeSequence:
     
 
 
-class TransformDNASequence(EncodeSequence):
-    def __init__(self,                
-                 nucleotide_categories : List[str] = categories_4_letters_unknown,
-                 label_type = 'labels_simple_direction_DA', 
-                ):
-        
-        super().__init__(categories = nucleotide_categories)
-            
-        self.label_dict = label_dict[label_type]
-        
-    @staticmethod
-    def make_mask(sequence, mask = None):
-        if mask is None:
-            mask = np.full(len(sequence), True)
-        return mask
-    @staticmethod        
-    def get_strand(label=None, reverse_value = 4, strand=None):
-        if label is None:
-            return None
-        elif reverse_value in label:
-            strand = '-'
-        else:
-            strand = '+'
-        return strand
-    
-    # get CDS
-    def get_cds(self, sequence,
-                label,
-                mask = None, 
-                CDS_values : Optional[List[int]] = None, 
-                return_forward = True,
-                return_string = False,
-               ):
-            
-        mask = TransformDNASequence.make_mask(sequence, mask)
-        
-        label = self.reduce_last_dim(label)[mask] 
-        
-        if isinstance(sequence, str):
-            sequence = self.transform_integer(sequence)
-                
-        sequence = sequence[mask]
-            
-        sequence = self.reduce_last_dim(sequence) 
-        
-        if CDS_values is None: 
-            CDS_values = [self.label_dict[k].get('CDS') for k in self.label_dict.keys() if type(self.label_dict[k]) is dict]
-            CDS_values = np.concatenate(CDS_values).tolist()
-        cds_mask = np.in1d(label, CDS_values)
-        sequence = sequence[cds_mask]
-        
-        if return_string is True:
-            sequence = self.inverse_transform_integer(sequence)
-            if return_forward is True and TransformDNASequence.get_strand(label) == '-':
-                sequence = TransformDNASequence.get_reverse_complement(sequence)
-            
-        return sequence
-
-    # translate to protein
-    def translate(self, sequence, label = None, 
-                  mask = None, reverse_strand = False, get_cds_first = True): 
-        
-        '''
-        Translate DNA sequence into protein sequence
-        Ff the sequence is the reverse strand then translate reverse complement.
-        '''
-        if get_cds_first is True and label is not None: 
-            sequence = self.get_cds(sequence, label = label, mask = mask, return_forward = True, return_string=True)
-        else: # TODO this is clumsy
-            if isinstance(sequence, (torch.Tensor, np.ndarray)): # make string
-                sequence = self.inverse_transform_integer(sequence)
-        
-        sequence = Seq(sequence)
-        if reverse_strand:
-            sequence = sequence.reverse_complement()
-        sequence = sequence.translate()
-    
-        return str(sequence)
-    
-    @staticmethod
-    def get_complement(sequence):
-        pass
-    @staticmethod 
-    def get_reverse_complement(sequence):
-        sequence = Seq(sequence)
-        sequence = sequence.reverse_complement()
-        return str(sequence)
-    
-    def get_cds_bulk(self, sequence, label, mask = None, 
-                     CDS_values : Optional[List[int]] = None, 
-                     return_forward = True,
-                     return_string = False,):
-    
-
-        mapfunc = partial(self.get_cds, mask = mask, 
-                          CDS_values = CDS_values, return_forward = return_forward, return_string=return_string)
-        cds = list(map(mapfunc, sequence, label))
-        return cds
-    
-    
-    def translate_bulk(self, sequence, label = None, mask = None, reverse_strand = False, get_cds_first = True):
-        if label is None: 
-            mapfunc = partial(self.translate, label = label, mask = mask, reverse_strand= reverse_strand, get_cds_first=get_cds_first)
-            protein = list(map(mapfunc, sequence))
-        else: 
-            mapfunc = partial(self.translate, mask = mask, reverse_strand= reverse_strand, get_cds_first=get_cds_first)
-            protein = list(map(mapfunc, sequence, label))
-        return protein
-    
-    def bulk_fn(self, fn,  *args, **kwargs):
-        
-
-        mapfunc = partial(fn, **kwargs)
-        
-        result = list(map(mapfunc, *args))
-        
-        return result

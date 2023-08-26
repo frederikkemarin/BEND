@@ -1,11 +1,35 @@
+"""
+download.py
+===========
+Utility functions for downloading pretrained models from the web.
+"""
+
 import os 
 
-def download_model(model = 'convnet', 
-                   base_url = 'https://sid.erda.dk/share_redirect/dbQM0pgSlM/pretrained_models/',
+def download_model(model: str = 'convnet', 
+                   base_url: str = 'https://sid.erda.dk/share_redirect/dbQM0pgSlM/pretrained_models/',
                    destination_dir : str = './pretrained_models/' # pretrained_models
-                   ):
+                   ) -> None:
+    """Download BEND pretrained model checkpoints from the ERDA URL. 
+    Uses wget to download the files.
     
-    """download model from url to destination directory"""
+    Parameters
+    ----------
+    model : str
+        Model to download. Needs to be a directory name in base_url.
+    base_url : str
+        Base URL to download from. 
+        Default is BEND's pretrained models directory on ERDA.
+    destination_dir : str
+        Destination directory to download to.
+        Default is ./pretrained_models/
+
+    Returns
+    -------
+    None.
+    """
+    
+    # """download model from url to destination directory"""
     # make destination directory if it doesn't exist
     os.makedirs(destination_dir, exist_ok=True)
     

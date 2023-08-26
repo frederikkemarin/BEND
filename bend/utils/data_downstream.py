@@ -1,11 +1,33 @@
+"""
+data_downstream.py
+==================
+Data loading and processing utilities for training
+downsteam tasks on embeddings saved in tfrecord format.
+"""
+
 # create torch dataset & dataloader from tfrecord
 import torch
 from bend.io.datasets import TFRecordIterableDataset
 from functools import partial
 import os
 import glob
+from typing import List, Tuple, Union
 
-def pad_to_longest(sequences, padding_value = -100, batch_first=True):
+def pad_to_longest(sequences: List[torch.Tensor], padding_value = -100, batch_first=True):
+    '''Pad a list of sequences to the longest sequence in the list.
+    Parameters
+    ----------
+    sequences : list[torch.Tensor]
+        List of sequences to pad.
+    padding_value : int, optional
+        Value to pad with. The default is -100.
+    batch_first : bool, optional
+        Whether to return the batch dimension first. The default is True.
+    Returns
+    -------
+    sequences : torch.Tensor
+        Padded sequences.
+    '''
     
     sequences = torch.nn.utils.rnn.pad_sequence(sequences, 
                                                 padding_value=padding_value, 
@@ -15,6 +37,18 @@ def pad_to_longest(sequences, padding_value = -100, batch_first=True):
 
 def collate_fn_pad_to_longest(batch, 
                               padding_value = -100):
+    '''Collate function for dataloader that pads to the longest sequence in the batch.
+    Parameters
+    ----------
+    batch : list
+        List of samples to collate.
+    padding_value : int, optional
+        Value to pad with. The default is -100.
+    Returns
+    -------
+    padded : Tuple[torch.Tensor]
+        Padded batch.
+    '''
     
     if isinstance(batch, torch.Tensor):
         return batch
@@ -27,14 +61,17 @@ def collate_fn_pad_to_longest(batch,
 
     return padded
 
-from typing import Union
 
 def worker_init_fn(self, _):
-        worker_info = torch.utils.data.get_worker_info()
-        dataset = worker_info.dataset
-        worker_id = worker_info.id
-        split_size = len(dataset.data) //worker_info.num_workers
-        dataset.data = dataset.data[worker_id * split_size:(worker_id +1) * split_size]
+    """
+    Initialize worker function for data loading to make sure that each worker loads a different part of the data.
+    See the pytorch data loading documentation for more information.
+    """
+    worker_info = torch.utils.data.get_worker_info()
+    dataset = worker_info.dataset
+    worker_id = worker_info.id
+    split_size = len(dataset.data) //worker_info.num_workers
+    dataset.data = dataset.data[worker_id * split_size:(worker_id +1) * split_size]
 
 
 
@@ -43,8 +80,24 @@ def return_dataloader(data : Union[str, list],
                       num_workers : int = 0,
                       padding_value = -100, 
                       shuffle : int = None):
+    """
+    Function to return a dataloader from a list of tfrecords or a single tfrecord.
+    
+    Parameters
+    ----------
+    data : Union[str, list]
+        Path to tfrecord or list of paths to tfrecords.
+    batch_size : int, optional
+        Batch size. The default is 8.
+    num_workers : int, optional
+        Number of workers for data loading. The default is 0.
+    padding_value : int, optional
+        Value to pad with. The default is -100.
+    shuffle : int, optional
+        Whether to shuffle the data. The default is None.
+    """
 
-    '''Load data to dataloader from a list of paths or a single path'''
+    # '''Load data to dataloader from a list of paths or a single path'''
     if isinstance(data, str):
         data = [data]
     dataset = TFRecordIterableDataset(data, shuffle = shuffle)
@@ -57,29 +110,50 @@ def return_dataloader(data : Union[str, list],
     return dataloader
 
 def get_data(data_dir : str, 
-            train_data : list = None, 
-             valid_data : list = None, 
-             test_data : list = None, 
+            train_data : List[str] = None, 
+             valid_data : List[str] = None, 
+             test_data : List[str] = None, 
              cross_validation : Union[bool, int] = False, 
              batch_size : int = 8,
              num_workers : int = 32,
              padding_value = -100, 
              shuffle : int = None, 
              **kwargs):
+
     """
-    Function to get data from tfrecords. 
-    Args: 
-        data_dir: path to data directory containing the tfrecords
-        train_data: path to train tfrecord, in case of cross validation can give simply the path to the data directory
-        valid_data: path to valid tfrecord
-        test_data: path to test tfrecord
-        cross_validation: bool/int, if int, use the given partition as test set, 
-                                    +1 as valid set and the rest as train set.
-                                    First split is 1.
-        batch_size: int, batch size
-        num_workers: int, number of workers for dataloader
-        padding_value: int, value to pad sequences to longest sequence
-        shuffle: int, shuffle value for the train dataloader
+    Function to get data from tfrecords.
+    
+    Parameters
+    ----------
+    data_dir : str
+        Path to data directory containing the tfrecords.
+    train_data : List[str], optional
+        List of paths to train tfrecords. The default is None.
+        In case of cross validation can be simply the path to the data directory.
+    valid_data : List[str], optional
+        List of paths to valid tfrecords. The default is None.
+    test_data : List[str], optional
+        List of paths to test tfrecords. The default is None.
+    cross_validation : Union[bool, int], optional
+        If int, use the given partition as test set, +1 as valid set and the rest as train set.
+        First split is 1. The default is False.
+    batch_size : int, optional
+        Batch size. The default is 8.
+    num_workers : int, optional
+        Number of workers for data loading. The default is 0.
+    padding_value : int, optional
+        Value to pad with. The default is -100.
+    shuffle : int, optional
+        Whether to shuffle the data. The default is None.
+
+    Returns
+    -------
+    train_dataloader : torch.utils.data.DataLoader
+        Dataloader for training data.
+    valid_dataloader : torch.utils.data.DataLoader
+        Dataloader for validation data.
+    test_dataloader : torch.utils.data.DataLoader
+        Dataloader for test data.  
     """
 
     if cross_validation is not False:
