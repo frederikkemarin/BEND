@@ -18,7 +18,7 @@ Running new embedders
 First, an embedder needs to be implemented as laid out in the tutorial on adding new embedders. To run a new embedder on tasks, you should extend the `conf/embedding/embed.yaml <https://github.com/frederikkemarin/BEND/tree/main/conf/embedding/embed.yaml>`_ file following the example below.
 This config file is used by the ``precompute_embeddings.py`` script to generate embeddings for the different tasks, as shown in the GitHub README.
 
-.. code-block::
+.. code-block:: yaml
 
     embedder_name:
     _target_ : bend.utils.embedders.NewEmbedderClass
@@ -33,7 +33,7 @@ E.g. typically, ``arg_1`` will be a name or path of the model. ``arg_2`` could b
 
 The ``embedder_name`` must also be added in the `conf/embedding/embed.yaml <https://github.com/frederikkemarin/BEND/tree/main/conf/embedding/embed.yaml>`_ under ``models``:
 
-.. code-block::
+.. code-block:: yaml
 
     models:
     - resnetlm
@@ -66,7 +66,7 @@ column can also indicate folds for cross-validation, as seen in BEND's Enhancer 
 The `conf/embedding/embed.yaml <https://github.com/frederikkemarin/BEND/tree/main/conf/embedding/embed.yaml>`_ file configures for which 
 ``splits`` embeddings are generated when running ``precompute_embeddings.py``:
 
-.. code-block::
+.. code-block:: yaml
 
   splits : 
     - train
@@ -77,7 +77,7 @@ If ``splits`` is set to ``null``, all splits in the ``split`` column will be gen
 
 In this file, add the name of the new dataset/task under ``tasks``, and append a new config entry indicating the files and how to process them:
 
-.. code-block::
+.. code-block:: yaml
 
   tasks : 
     - new_task_name 
@@ -106,7 +106,7 @@ To train models on the new task, you should add a ``new_task`` directory to
 This directory needs to be populated with a config file for each model that should be trained on the task.
 Below is an example of one such config file.
 
-.. code-block::
+.. code-block:: yaml
 
   defaults:
     - datadims : [label_dims,embedding_dims]
@@ -152,4 +152,4 @@ Below is an example of one such config file.
   wandb:
     mode : disabled 
 
-After having run ``precompute_embeddings.py``, you can run ``train_on_task.py`` as indicated in the GitHub README!
+After having run ``precompute_embeddings.py``, you can now run ``train_on_task.py`` as indicated in the GitHub README!
