@@ -5,6 +5,13 @@ Wrapper classes for embedding sequences with pretrained DNA language models usin
 The wrapper classes handle loading the models and tokenizers, and embedding the sequences. As far as possible,
 models are downloaded automatically.
 They also handle removal of special tokens, and optionally upsample the embeddings to the original sequence length.
+
+Embedders can be used as follows. Please check the individual classes for more details on the arguments.
+
+`embedder = EmbedderClass(model_name, some_additional_config_argument=6)`
+
+`embedding = embedder(sequence, remove_special_tokens=True, upsample_embeddings=True)`
+```
 '''
 
 

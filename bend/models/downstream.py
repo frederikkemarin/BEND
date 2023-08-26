@@ -1,7 +1,10 @@
 '''
 downstream.py
 ====================================
-Supervised models to be trained on embedded or one-hot encoded sequences.
+This module contains the implementations of the supervised models used in the paper.
+
+- :class:`~bend.models.downstream.ConvNetForSupervised`: a ResNet that we train as baseline model on one-hot encodings, if no dedicated baseline architecture is available for a task.
+- :class:`~bend.models.downstream.CNN`: a two-layer CNN used for all downstream tasks.
 '''
 from typing import Union
 import torch 

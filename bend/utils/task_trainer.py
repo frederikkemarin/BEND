@@ -1,7 +1,7 @@
 """
 task_trainer.py
 ===============
-Trainer class for training downstream models on supervised tasks
+Trainer class for training downstream models on supervised tasks.
 """
 import torch 
 import torch.nn as nn

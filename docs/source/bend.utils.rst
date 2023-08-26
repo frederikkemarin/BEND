@@ -20,13 +20,13 @@ bend.utils.download module
    :undoc-members:
    :show-inheritance:
 
-bend.utils.embedders module
----------------------------
-
-.. automodule:: bend.utils.embedders
-   :members:
-   :undoc-members:
-   :show-inheritance:
+.. bend.utils.embedders module
+.. ---------------------------
+..
+.. .. automodule:: bend.utils.embedders
+..   :members:
+..   :undoc-members:
+..   :show-inheritance:
 
 bend.utils.retrieve\_from\_bed module
 -------------------------------------

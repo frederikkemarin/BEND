@@ -13,13 +13,9 @@ The BEND codebase serves three purposes:
 * Extracting sequences from reference genomes using coordinates listed in bed files, and computing embeddings for these sequences for training and evaluating DNA LMs.
 * Training lightweight supervised CNN models that use DNA LM embeddings as input, and evaluating their performance on a variety of tasks.
 
-.. automodule:: bend.models
-    :members:
 
-.. automodule:: bend.utils
-    :members:
-    :no-index: embedders
-
+The documentation covers the BEND codebase and includes instructions on how to extend it to new LMs and tasks. For a tutorial on how to run BEND on existing tasks, please refer to the 
+`README file <https://github.com/frederikkemarin/BEND>`_ on GitHub.
 
 
 .. toctree::
@@ -30,7 +26,15 @@ The BEND codebase serves three purposes:
    bend.utils.embedders
    adding_embedders
    bend.models
+   bend.utils
 
+
+.. automodule:: bend.models
+    :members:
+
+.. automodule:: bend.utils
+    :members:
+    :no-index: embedders
 
 
 
