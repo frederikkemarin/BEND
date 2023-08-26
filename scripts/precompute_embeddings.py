@@ -11,7 +11,12 @@ import sys
 @hydra.main(config_path="../conf/embedding/", config_name="embed", version_base=None)
 def run_experiment(cfg: DictConfig) -> None:
     """
-    Run the experiment with parameters specified in the config file.
+    Run a embedding of nucleotide sequences.
+    This function is called by hydra.
+    Parameters
+    ----------
+    cfg : DictConfig
+        Hydra configuration object.
     """
     for task in cfg.tasks:
         print('Embedding data for', task)
