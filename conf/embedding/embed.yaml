@@ -35,7 +35,7 @@ tasks :
 # model instatiators 
 dnabert2:
   _target_ : bend.utils.embedders.DNABert2Embedder
-  model_path : zhihan1996/DNABERT-2-117M
+  model_name : zhihan1996/DNABERT-2-117M
   upsample_embeddings : true
 dnabert6:
   _target_ : bend.utils.embedders.DNABertEmbedder
@@ -43,11 +43,11 @@ dnabert6:
   kmer : 6
 gena-lm-bigbird-base-t2t:
   _target_ : bend.utils.embedders.GENALMEmbedder
-  model_path : AIRI-Institute/gena-lm-bigbird-base-t2t
+  model_name : AIRI-Institute/gena-lm-bigbird-base-t2t
   upsample_embeddings : true
 gena-lm-bert-large-t2:
   _target_ : bend.utils.embedders.GENALMEmbedder
-  model_path : AIRI-Institute/gena-lm-bert-large-t2t 
+  model_name : AIRI-Institute/gena-lm-bert-large-t2t 
   upsample_embeddings : true
 hyenadna-large-1m:
   _target_ : bend.utils.embedders.HyenaDNAEmbedder

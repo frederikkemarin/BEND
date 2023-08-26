@@ -533,13 +533,13 @@ class GENALMEmbedder(BaseEmbedder):
             Alternatively, you can provide a path to a local model directory.
         """
 
-        if not any(['bigbird' in model_path, 'bert' in model_path]):
+        if not any(['bigbird' in model_name, 'bert' in model_name]):
             raise ValueError('Model path must contain either bigbird or bert in order to be loaded correctly.')
         
-        if 'bigbird' in model_path:
-            self.model = BigBirdModel.from_pretrained(model_path)
+        if 'bigbird' in model_name:
+            self.model = BigBirdModel.from_pretrained(model_name)
         else:
-            self.model = GenaLMBertModel.from_pretrained(model_path)
+            self.model = GenaLMBertModel.from_pretrained(model_name)
         self.model.to(device)
         self.model.eval()
 
@@ -802,8 +802,8 @@ class DNABert2Embedder(BaseEmbedder):
 
 
         # keep the source in this repo to avoid using flash attn. 
-        self.model = DNABert2BertModel.from_pretrained(model_path)
-        self.tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
+        self.model = DNABert2BertModel.from_pretrained(model_name)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
         self.model.eval()
         self.model.to(device)
 
