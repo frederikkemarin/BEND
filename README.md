@@ -4,6 +4,8 @@
 [![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 [![Documentation Status](https://readthedocs.org/projects/bend/badge/?version=latest)](https://bend.readthedocs.io/en/latest/?badge=latest)
 
+## Documentation
+[Documentation for the BEND code repository](https://bend.readthedocs.io/en/latest/?badge=latest).
 
 ## Data
 
