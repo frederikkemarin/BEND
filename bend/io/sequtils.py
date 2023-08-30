@@ -130,7 +130,7 @@ def embed_from_multilabled_bed_gen(bed, reference_fasta, embedder, label_column_
 
 
 def embed_from_bed(bed, reference_fasta, embedder, upsample_embeddings = False, 
-                  hdf5_file= None, read_strand = False, label_column_idx=6, label_depth=None, split = None):
+                  hdf5_file= None, read_strand = False, label_column_idx=6, label_depth=None, split = None, flank = 0):
     fasta = Fasta(reference_fasta)
     # open hdf5 file 
     hdf5_file = h5py.File(hdf5_file, mode = "r") if hdf5_file else None
@@ -153,7 +153,7 @@ def embed_from_bed(bed, reference_fasta, embedder, upsample_embeddings = False,
             labels = list(map(int, line[label_column_idx].split(',')))
             labels = multi_hot(labels, depth=label_depth)
         # get sequence
-        sequence = fasta.fetch(chrom, start, end, strand = strand) # categorical labels
+        sequence = fasta.fetch(chrom, start, end, strand = strand, flank = flank) # categorical labels
         # embed sequence
         sequence_embed = embedder(sequence, upsample_embeddings = upsample_embeddings)
         sequence_embed = tf.squeeze(tf.constant(sequence_embed))
