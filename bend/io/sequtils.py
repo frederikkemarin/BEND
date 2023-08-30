@@ -54,7 +54,7 @@ class Fasta():
         
         self._fasta = pysam.FastaFile(fasta)
     
-    def fetch(self, chrom: str, start: int, end: int, strand: str = '+') -> str:
+    def fetch(self, chrom: str, start: int, end: int, strand: str = '+', flank : int = 0) -> str:
         """
         Fetch a sequence from the reference genome fasta file.
 
@@ -69,13 +69,14 @@ class Fasta():
         strand : str, optional
             Strand. The default is '+'.
             If strand is '-', the sequence will be reverse-complemented before returning.
-        
+        flank : int, optional
+            Number of bases to add to the start and end coordinates. The default is 0.
         Returns
         -------
         str
             Sequence from the reference genome fasta file.
         """
-        sequence = self._fasta.fetch(str(chrom), start, end).upper()
+        sequence = self._fasta.fetch(str(chrom), start - flank, end + flank).upper()
         
         if strand == '+':
             pass
