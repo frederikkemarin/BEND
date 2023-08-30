@@ -6,10 +6,7 @@ hydra :
     - file://conf 
 data_dir : ./data/
 embedders_dir : ./pretrained_models/
-splits : 
-  - train
-  - valid 
-  - test
+splits : null
 models : 
   #- gena-lm-bigbird-base-t2t
   #- gena-lm-bert-large-t2
