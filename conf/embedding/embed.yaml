@@ -2,33 +2,37 @@ defaults:
   - datadims : [label_dims,embedding_dims]
   - _self_
 hydra : 
+  mode : MULTIRUN
   searchpath:
     - file://conf 
+  sweeper:
+    params:
+      model: gena-lm-bigbird-base-t2t,
+             gena-lm-bert-large-t2,
+             hyenadna-tiny-1k,
+             hyenadna-small-32k,
+             hyenadna-medium-160k,
+             hyenadna-medium-450k,
+             hyenadna-large-1m,
+             dnabert6,
+             resnetlm,
+             awdlstm,
+             nt_transformer_ms,
+             nt_transformer_human_ref,
+             nt_transformer_1000g,
+             dnabert2,
+             onehot
+      task: gene_finding,
+            enhancer_annotation,
+            variant_effects,
+            histone_modification,
+            chromatin_accessibility
+
 data_dir : ./data/
 embedders_dir : ./pretrained_models/
 splits : null
-models : 
-  #- gena-lm-bigbird-base-t2t
-  #- gena-lm-bert-large-t2
-  #- hyenadna-tiny-1k
-  #- hyenadna-small-32k
-  #- hyenadna-medium-160k
-  #- hyenadna-medium-450k
-  #- hyenadna-large-1m
-  #- dnabert6
-  #- resnetlm
-  #- awdlstm
-  #- nt_transformer_ms
-  #- nt_transformer_human_ref
-  #- nt_transformer_1000g
-  #- dnabert2
-  #- onehot
-tasks : 
-  #- gene_finding
-  #- enhancer_annotation
-  #- variant_effects
-  - histone_modification
-  #- chromatin_accessibility
+model : nt_transformer_1000g
+task : gene_finding
 # model instatiators 
 dnabert2:
   _target_ : bend.utils.embedders.DNABert2Embedder
