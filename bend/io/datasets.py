@@ -9,7 +9,6 @@ The code here only handles iteration and conversion to torch tensors.
 import torch
 from bioio.tf.utils import load_tfrecord
 
-
 # %%
 class TFRecordIterableDataset(torch.utils.data.IterableDataset):
     """Iterable dataset for loading data from tfrecords.
