@@ -5,7 +5,8 @@ import os
 import bend.io.sequtils as sequtils
 import pandas as pd
 from bioio.tf import dataset_from_iterable
-from bioio.tf import dataset_to_tfrecord
+#from bioio.tf import dataset_to_tfrecord
+from bend.io.datasets import dataset_to_tfrecord
 import sys
 # load config 
 @hydra.main(config_path="../conf/embedding/", config_name="embed", version_base=None)
