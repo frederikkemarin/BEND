@@ -31,7 +31,7 @@ def run_experiment(cfg: DictConfig) -> None:
             embedder = hydra.utils.instantiate(cfg[model])
             for split in splits:
                 print(f'Embedding {split} set')
-                output_dir = f'{cfg.data_dir}/{task}/{model}/'
+                output_dir = f'{cfg.data_dir}/{task}/{model}/' if not 'output_dir' in cfg else cfg.output_dir
                 os.makedirs(output_dir, exist_ok=True)
                 gen = sequtils.embed_from_bed(**cfg[task], embedder = embedder, split = split, 
                                              upsample_embeddings = cfg[model]['upsample_embeddings'] if 'upsample_embeddings' in cfg[model] else False)
