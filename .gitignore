@@ -5,6 +5,7 @@ outputs/
 data/
 downstream_tasks/
 submit.sh
+multirun/
 
 # Byte-compiled / optimized / DLL files
 **/__pycache__/

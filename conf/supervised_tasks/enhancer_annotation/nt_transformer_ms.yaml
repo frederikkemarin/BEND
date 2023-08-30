@@ -25,7 +25,7 @@ data:
   batch_size : 32
   num_workers : 0
   padding_value : -100
-  shuffle : 500
+  shuffle : 100
   data_dir : ./data/${task}/${embedder}/
   cross_validation : 1 # which split to run in the cross validation
 params:
