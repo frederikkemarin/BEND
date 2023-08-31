@@ -2,9 +2,12 @@ defaults:
   - datadims : [label_dims,embedding_dims]
   - _self_
 hydra : 
+  mode : MULTIRUN
   searchpath:
-    #- pkg://conf
     - file://conf 
+  sweeper:
+    params:
+      data.cross_validation: range(1,11)
 task : enhancer_annotation 
 embedder : nt_transformer_1000g
 output_dir: ./downstream_tasks/${task}/${embedder}/split_${data.cross_validation}
@@ -22,17 +25,17 @@ optimizer :
   weight_decay: 0.01
 data:
   _target_: bend.utils.data_downstream.get_data
-  batch_size : 2
+  batch_size : 32
   num_workers : 0
   padding_value : -100
-  shuffle : 500
+  shuffle : 100
   data_dir : ./data/${task}/${embedder}/
   cross_validation : 1 # which split to run in the cross validation
 params:
   epochs: 100
   load_checkpoint: true
   mode: train
-  gradient_accumulation_steps: 4
+  gradient_accumulation_steps: 1
   criterion: cross_entropy
   class_weights:
   - 1
