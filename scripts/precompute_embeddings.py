@@ -18,28 +18,27 @@ def run_experiment(cfg: DictConfig) -> None:
     cfg : DictConfig
         Hydra configuration object.
     """
-    for task in cfg.tasks:
-        print('Embedding data for', task)
-        # read the bed file and get the splits :  
-        if not 'splits' in cfg or cfg.splits is None:
-            splits = sequtils.get_splits(cfg[task].bed) 
-        else:
-            splits = cfg.splits
-        for model in cfg.models:
-            print('Embedding with', model) 
-            # instatiante model
-            embedder = hydra.utils.instantiate(cfg[model])
-            for split in splits:
-                print(f'Embedding {split} set')
-                output_dir = f'{cfg.data_dir}/{task}/{model}/'
-                os.makedirs(output_dir, exist_ok=True)
-                gen = sequtils.embed_from_bed(**cfg[task], embedder = embedder, split = split, 
-                                             upsample_embeddings = cfg[model]['upsample_embeddings'] if 'upsample_embeddings' in cfg[model] else False)
-                # save the embeddings to tfrecords 
-                dataset = dataset_from_iterable(gen)
-                dataset.element_spec
-                dataset_to_tfrecord(dataset, f'{output_dir}/{split}.tfrecord')
-
+    print('Embedding data for', cfg.task)
+    # read the bed file and get the splits :  
+    if not 'splits' in cfg or cfg.splits is None:
+        splits = sequtils.get_splits(cfg[cfg.task].bed) 
+    else:
+        splits = cfg.splits
+    print('Embedding with', cfg.model) 
+    # instatiante model
+    embedder = hydra.utils.instantiate(cfg[cfg.model])
+    for split in splits:
+        print(f'Embedding {split} set')
+        output_dir = f'{cfg.data_dir}/{cfg.task}/{cfg.model}/'
+        
+        os.makedirs(output_dir, exist_ok=True)
+        gen = sequtils.embed_from_bed(**cfg[task], embedder = embedder, split = split, 
+                                        upsample_embeddings = cfg.model['upsample_embeddings'] if 'upsample_embeddings' in cfg.model else False)
+        # save the embeddings to tfrecords 
+        dataset = dataset_from_iterable(gen)
+        dataset.element_spec
+        dataset_to_tfrecord(dataset, f'{output_dir}/{split}.tfrecord')
+        
 
 
 

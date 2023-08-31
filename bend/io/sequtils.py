@@ -54,7 +54,7 @@ class Fasta():
         
         self._fasta = pysam.FastaFile(fasta)
     
-    def fetch(self, chrom: str, start: int, end: int, strand: str = '+') -> str:
+    def fetch(self, chrom: str, start: int, end: int, strand: str = '+', flank : int = 0) -> str:
         """
         Fetch a sequence from the reference genome fasta file.
 
@@ -69,13 +69,14 @@ class Fasta():
         strand : str, optional
             Strand. The default is '+'.
             If strand is '-', the sequence will be reverse-complemented before returning.
-        
+        flank : int, optional
+            Number of bases to add to the start and end coordinates. The default is 0.
         Returns
         -------
         str
             Sequence from the reference genome fasta file.
         """
-        sequence = self._fasta.fetch(str(chrom), start, end).upper()
+        sequence = self._fasta.fetch(str(chrom), start - flank, end + flank).upper()
         
         if strand == '+':
             pass
@@ -129,7 +130,7 @@ def embed_from_multilabled_bed_gen(bed, reference_fasta, embedder, label_column_
 
 
 def embed_from_bed(bed, reference_fasta, embedder, upsample_embeddings = False, 
-                  hdf5_file= None, read_strand = False, label_column_idx=6, label_depth=None, split = None):
+                  hdf5_file= None, read_strand = False, label_column_idx=6, label_depth=None, split = None, flank = 0):
     fasta = Fasta(reference_fasta)
     # open hdf5 file 
     hdf5_file = h5py.File(hdf5_file, mode = "r") if hdf5_file else None
@@ -152,7 +153,7 @@ def embed_from_bed(bed, reference_fasta, embedder, upsample_embeddings = False,
             labels = list(map(int, line[label_column_idx].split(',')))
             labels = multi_hot(labels, depth=label_depth)
         # get sequence
-        sequence = fasta.fetch(chrom, start, end, strand = strand) # categorical labels
+        sequence = fasta.fetch(chrom, start, end, strand = strand, flank = flank) # categorical labels
         # embed sequence
         sequence_embed = embedder(sequence, upsample_embeddings = upsample_embeddings)
         sequence_embed = tf.squeeze(tf.constant(sequence_embed))
