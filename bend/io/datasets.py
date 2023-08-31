@@ -24,8 +24,11 @@ def load_tfrecord(tfrecords, features_file=None, deserialize=True, shuffle=None)
         # backward compatibility, accept a single tfrecord file instead of a list of tfrecord files
         tfrecords = [tfrecords]
     dataset = tf.data.Dataset.from_tensor_slices(tfrecords)
+    #try:
     dataset = dataset.interleave(lambda fp: tf.data.TFRecordDataset(fp, compression_type='ZLIB'), cycle_length=1, block_length=1, num_parallel_calls=tf.data.AUTOTUNE)
-
+    #except: 
+    #    dataset = dataset.interleave(lambda fp: tf.data.TFRecordDataset(fp), cycle_length=1, block_length=1, num_parallel_calls=tf.data.AUTOTUNE)
+    
     if shuffle is not None:
         # shuffle examples before deserializing
         assert isinstance(shuffle, int)
