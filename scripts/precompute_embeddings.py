@@ -5,7 +5,8 @@ import os
 import bend.io.sequtils as sequtils
 import pandas as pd
 from bioio.tf import dataset_from_iterable
-from bioio.tf import dataset_to_tfrecord
+#from bioio.tf import dataset_to_tfrecord
+from bend.io.datasets import dataset_to_tfrecord
 import sys
 # load config 
 @hydra.main(config_path="../conf/embedding/", config_name="embed", version_base=None)
@@ -32,8 +33,8 @@ def run_experiment(cfg: DictConfig) -> None:
         output_dir = f'{cfg.data_dir}/{cfg.task}/{cfg.model}/'
         
         os.makedirs(output_dir, exist_ok=True)
-        gen = sequtils.embed_from_bed(**cfg[task], embedder = embedder, split = split, 
-                                        upsample_embeddings = cfg.model['upsample_embeddings'] if 'upsample_embeddings' in cfg.model else False)
+        gen = sequtils.embed_from_bed(**cfg[cfg.task], embedder = embedder, split = split, 
+                                        upsample_embeddings = cfg[cfg.model]['upsample_embeddings'] if 'upsample_embeddings' in cfg[cfg.model] else False)
         # save the embeddings to tfrecords 
         dataset = dataset_from_iterable(gen)
         dataset.element_spec

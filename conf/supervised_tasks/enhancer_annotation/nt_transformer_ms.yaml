@@ -22,7 +22,7 @@ optimizer :
   weight_decay: 0.01
 data:
   _target_: bend.utils.data_downstream.get_data
-  batch_size : 4
+  batch_size : 32
   num_workers : 0
   padding_value : -100
   shuffle : 100
@@ -32,7 +32,7 @@ params:
   epochs: 100
   load_checkpoint: true
   mode: train
-  gradient_accumulation_steps: 2
+  gradient_accumulation_steps: 1
   criterion: cross_entropy
   class_weights:
   - 1
