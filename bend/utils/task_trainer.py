@@ -330,7 +330,6 @@ class BaseTrainer:
         self.model.train()
         train_loss = 0
         for idx, batch in enumerate(train_loader):
-            print('batch', idx)
             train_loss += self.train_step(batch, idx = idx)
         train_loss /= (idx +1)
         return train_loss
