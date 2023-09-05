@@ -1,14 +1,14 @@
 defaults:
   - datadims : [label_dims,embedding_dims]
+  - hydra : multirun 
   - _self_
 hydra :
-  #mode : MULTIRUN
   searchpath:
     #- pkg://conf
     - file://conf 
-  #sweeper:
-  #  params:
-  #    data.cross_validation: range(1,11)
+  sweeper:
+    params:
+      data.cross_validation: range(1,11)
 task : enhancer_annotation 
 embedder : awdlstm
 output_dir: ./downstream_tasks/${task}/${embedder}/split_${data.cross_validation}
