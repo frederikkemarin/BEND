@@ -8,7 +8,6 @@ hydra :
     - file://conf 
   sweeper:
     params:
-      data.cross_validation: range(1,11)
       embedder : gena-lm-bigbird-base-t2t,
                  gena-lm-bert-large-t2,
                  hyenadna-tiny-1k,
