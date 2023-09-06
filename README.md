@@ -43,7 +43,7 @@ python scripts/precompute_embeddings.py
 ```
 This script automatically calls the hydra config file at ```/../conf/embeddings/embed.yaml```. 
 
-By default all embeddings are generated for all tasks. To alter the tasks/model for which to compute the embeddings, please alter the ```tasks``` and/or the ```models``` list in the config file (under hydra.sweeper) or override the behaviour from the commandline as such: 
+By default all embeddings are generated for all tasks. To alter the tasks/model for which to compute the embeddings, please alter the ```tasks``` and/or the ```models``` list in the config file (under ```hydra.sweeper``) or override the behaviour from the commandline in the following manner: 
 
 ```
 python scripts/precompute_embeddings.py model=resnetlm,awdlstm task=gene_finding,enhancer_annotation
