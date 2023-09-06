@@ -94,7 +94,7 @@ To run a downstream task run (from `BEND/`):
 ```
 python scripts/train_on_task.py --config-name {tasl}
 ```
-By default the task is run for all embeddings. To alter this either modigy the config file or change the settings from the commandline 
+By default the task is run on all embeddings. To alter this either modify the config file or change the settings from the commandline 
 E.g. to run gene finding on all embeddings the commandline is:
 ```
 python scripts/train_on_task.py --config-name gene_finding
