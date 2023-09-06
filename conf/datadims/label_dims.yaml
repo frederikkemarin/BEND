@@ -3,3 +3,4 @@ enhancer_annotation: 1
 variant_effects: 2
 histone_modification: 18
 chromatin_accessibility: 125
+cpg_methylation: 7
