@@ -59,7 +59,7 @@ def run_experiment(cfg: DictConfig) -> None:
     elif cfg.params.criterion == 'mse':
         criterion = MSELoss()
     elif cfg.params.criterion == 'bce':
-        criterion = BCEWithLogitsLoss()
+        criterion = BCEWithLogitsLoss(class_weights=torch.tensor(cfg.params.class_weights).to(device) if cfg.params.class_weights is not None else None)
 
     # init dataloaders 
     train_loader, val_loader, test_loader = hydra.utils.instantiate(cfg.data) # instantiate dataloaders

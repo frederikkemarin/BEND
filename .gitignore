@@ -2,6 +2,7 @@
 scripts/submit.sh
 # hydra logs
 outputs/
+slurm*out
 data/
 downstream_tasks/
 submit.sh

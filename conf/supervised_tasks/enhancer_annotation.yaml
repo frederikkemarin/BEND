@@ -22,7 +22,7 @@ hydra :
                  nt_transformer_human_ref,
                  nt_transformer_1000g,
                  dnabert2,
-                 onehot
+                 onehot,
                  awdlstm
 embedder : onehot
 task : enhancer_annotation 
@@ -52,11 +52,10 @@ params:
   load_checkpoint: true
   mode: train
   gradient_accumulation_steps: 1
-  criterion: cross_entropy
+  criterion: bce
   class_weights:
-  - 1
-  - 82.86
-  metric : mcc
+    - 82.86
+  metric : auprc
   activation : none
 wandb:
   mode : disabled 

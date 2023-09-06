@@ -36,6 +36,8 @@ class CrossEntropyLoss(nn.Module):
         super(CrossEntropyLoss, self).__init__()
         self.ignore_index = ignore_index
         self.weight = weight
+        self.criterion = torch.nn.CrossEntropyLoss(ignore_index = self.ignore_index, 
+                                              weight=self.weight)
 
     def forward(self, pred, target):
         """
@@ -53,9 +55,8 @@ class CrossEntropyLoss(nn.Module):
         loss : torch.Tensor
             Cross entropy loss.
         """
-        criterion = torch.nn.CrossEntropyLoss(ignore_index = self.ignore_index, 
-                                              weight=self.weight)
-        return criterion(pred.permute(0, 2, 1), target)
+        
+        return self.criterion(pred.permute(0, 2, 1), target)
 
 class PoissonLoss(nn.Module):
     """
@@ -96,13 +97,17 @@ class BCEWithLogitsLoss(nn.Module):
     BCEWithLogitsLoss for classification tasks. Wrapper around `torch.nn.BCEWithLogitsLoss`
     that takes care of the dimensionality of the input and target tensors.
     """
-    def __init__(self):
+    def __init__(self, class_weights : torch.Tensor = None, reduction : str = 'none'):
         """
         Get a BCEWithLogitsLoss object that can be used to train a model.
+        Parameters
+        ----------
+        class_weights : torch.Tensor
+            Weight for positive class
         """
         super(BCEWithLogitsLoss, self).__init__()
-        self.criterion = torch.nn.BCEWithLogitsLoss(reduction = 'none')
-    
+        self.criterion = torch.nn.BCEWithLogitsLoss(reduction = reduction)
+        self.class_weights = class_weights
     def forward(self, pred, target, padding_value = -100):
         """
         Calculate the BCEWithLogitsLoss for a given prediction and target.
@@ -115,16 +120,21 @@ class BCEWithLogitsLoss(nn.Module):
             Target tensor of labels.
         padding_value : int, optional
             Value to ignore in the loss calculation. The default is -100.
-
         Returns
         -------
         loss : torch.Tensor
             BCEWithLogitsLoss.
         """
-        if pred.dim() == 3:
-            loss =  self.criterion(pred.permute(0, 2, 1), target.float())
-        else: 
-            loss = self.criterion(pred, target.float())
+        #if pred.dim() == 3:
+        #    loss =  self.criterion(pred.permute(0, 2, 1), target.float())
+        #else: 
+        
+        loss = self.criterion(pred, target.float())
+        if self.class_weights is not None:
+            # multiply positive class with class_weights
+            
+            weight_tensor = torch.where(target == 1, self.class_weights, 1)
+            loss *= weight_tensor
         # remove loss for padded positions and return
         return torch.mean(loss[~target != padding_value])
     
@@ -256,7 +266,7 @@ class BaseTrainer:
             y_true: true labels
             y_pred: predicted labels
         Returns:
-            metric: the metric value
+            metric (str): the metric value [mcc, auroc, pearsonr, auprc]
         '''
         # check if any padding in the target
         if torch.any(y_true  == self.config.data.padding_value):
@@ -398,14 +408,14 @@ class BaseTrainer:
         -------
         loss : float
             The loss for the batch.
-        ß"""
+        """
         self.model.train()
         data, target = batch
         with torch.autocast(device_type='cuda', dtype=torch.float16):
             output = self.model(data.to(self.device), length = target.shape[-1], 
                                 activation = self.config.params.activation) 
-            if self.config.task == 'chromatin_accessibility' or self.config.task == 'histone_modification':
-                output = output.squeeze(1)
+            #if self.config.task == 'chromatin_accessibility' or self.config.task == 'histone_modification':
+            #    output = output.squeeze(1)
             loss = self.criterion(output, target.to(self.device).long())
             loss = loss / self.gradient_accumulation_steps
         # Accumulates scaled gradients.
@@ -417,7 +427,7 @@ class BaseTrainer:
             
         return loss.item()
 
-    def validate(self, data_loader, save_output = False):
+    def validate(self, data_loader):
         """
         Performs validation.
 
@@ -425,8 +435,6 @@ class BaseTrainer:
         ----------
         data_loader : torch.utils.data.DataLoader
             The data loader to be used.
-        save_output : bool, optional
-            If True, saves the targets and outputs to a torch file.
 
         Returns
         -------
@@ -442,8 +450,7 @@ class BaseTrainer:
         with torch.no_grad():
             for idx, (data, target) in enumerate(data_loader):
                 output = self.model(data.to(self.device), activation = self.config.params.activation)
-                if self.config.task == 'chromatin_accessibility' or self.config.task == 'histone_modification':
-                    output = output.squeeze(1)
+                if  self.config.params.criterion == 'bce': #self.config.task in ['chromatin_accessibility', 'histone_modification', 'enhancer_annotation']:
                     outputs.append(self.model.sigmoid(output).detach().cpu())
                 else: 
                     outputs.append(torch.argmax(self.model.softmax(output), dim=-1).detach().cpu()) 
@@ -451,8 +458,6 @@ class BaseTrainer:
                 targets_all.append(target.detach().cpu())  
 
         loss /= (idx + 1) 
-        if save_output:
-            torch.save({'targets': targets_all, 'outputs': outputs}, f'{self.config.output_dir}/test_set.torch')
         # compute metrics
         metric = self._calculate_metric(torch.cat(targets_all), 
                                           torch.cat(outputs))
@@ -489,7 +494,7 @@ class BaseTrainer:
         print(f'Loaded checkpoint from epoch {epoch}, train loss: {train_loss:.3f}, val loss: {val_loss:.3f}, Val {self.config.params.metric}: {np.mean(val_metric):.3f}')
 
         # test
-        loss, metric = self.validate(test_loader, save_output = False)
+        loss, metric = self.validate(test_loader)
         
         print(f'Test results : Loss {loss:.4f}, {self.config.params.metric} {np.mean(metric):.4f}')
         
