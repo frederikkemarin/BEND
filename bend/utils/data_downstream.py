@@ -155,7 +155,9 @@ def get_data(data_dir : str,
     test_dataloader : torch.utils.data.DataLoader
         Dataloader for test data.  
     """
-
+    # check if data exists 
+    if not os.path.exists(data_dir):
+        raise SystemExit('The data disrectory does not exists\nExiting script')
     if cross_validation is not False:
         cross_validation = int(cross_validation) -1 
         # get basepath of data directory
