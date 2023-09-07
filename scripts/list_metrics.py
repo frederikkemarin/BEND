@@ -30,5 +30,5 @@ for model in os.listdir(folder):
         metric.append(df[test_col].values[0])
 
     with open(f'{folder}/{model}/summed_metrics.txt', 'w') as f:
-        f.write(f'Model: {model:<25} | N runs: {len(metric):>2} | {test_metric} : {np.mean(metric):.4f} ± {np.std(metric):.4f}\n')
-    print(f'Model: {model:<25} | N runs: {len(metric):>2} | {test_metric} : {np.mean(metric):.4f} ± {np.std(metric):.4f}')
+        f.write(f'Embedding: {model:<25} | N runs: {len(metric):>2} | {test_metric} : {np.mean(metric):.4f} ± {np.std(metric):.4f}\n')
+    print(f'Embedding: {model:<25} | N runs: {len(metric):>2} | {test_metric} : {np.mean(metric):.4f} ± {np.std(metric):.4f}')

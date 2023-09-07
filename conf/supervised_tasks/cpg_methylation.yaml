@@ -1,12 +1,30 @@
 defaults:
-  - datadims : [label_dims,embedding_dims]
+  - datadims : [label_dims,embedding_dims, downstream_downsample]
+  - hydra : multirun 
+  - override hydra/launcher: joblib # ability to launch jobs in parallel fashion
   - _self_
-hydra : 
+hydra :
   searchpath:
-    - pkg://conf
     - file://conf 
-task : histone_modification 
-embedder : dnabert2
+  sweeper:
+    params:
+      embedder : gena-lm-bigbird-base-t2t,
+                 gena-lm-bert-large-t2,
+                 hyenadna-tiny-1k,
+                 hyenadna-small-32k,
+                 hyenadna-medium-160k,
+                 hyenadna-medium-450k,
+                 hyenadna-large-1m,
+                 dnabert6,
+                 resnetlm,
+                 nt_transformer_ms,
+                 nt_transformer_human_ref,
+                 nt_transformer_1000g,
+                 dnabert2,
+                 onehot
+                 awdlstm
+embedder : onehot
+task : cpg_methylation 
 output_dir: ./downstream_tasks/${task}/${embedder}/
 model:
   _target_: bend.models.downstream.CNN

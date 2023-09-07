@@ -147,7 +147,8 @@ class CNN(nn.Module):
         self.downsample = nn.Sequential(TransposeLayer(), 
                                         nn.AvgPool1d(kernel_size = output_downsample_window, 
                                                      stride = output_downsample_window), 
-                                        TransposeLayer(),) if output_downsample_window is not None else None
+                                        TransposeLayer(), 
+                                        ) if output_downsample_window is not None else None
         self.linear = nn.Sequential(nn.Linear(hidden_size, np.prod(output_size) if isinstance(output_size, tuple) else output_size))
         self.softmax =  nn.Softmax(dim = -1)
         self.softplus = nn.Softplus()
@@ -184,8 +185,9 @@ class CNN(nn.Module):
         # linear layer 
         x = self.linear(x)
         # reshape output if necessary
-        if isinstance(self.output_size, tuple):
-            x = torch.reshape(x, (x.shape[0], x.shape[1], *self.output_size))
+        if self.output_size == 1 and x.dim() > 2 or self.downsample:
+            x = torch.flatten(x, 1)
+        #    x = torch.reshape(x, (x.shape[0], x.shape[1], *self.output_size))
         # softmax
         if activation =='softmax': 
             x = self.softmax(x)

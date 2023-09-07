@@ -543,11 +543,11 @@ class GENALMEmbedder(BaseEmbedder):
         self.model.to(device)
         self.model.eval()
 
-        self.max_length = 4096-2 if 'bigbird' in model_path else 512-2
+        self.max_length = 4096-2 if 'bigbird' in model_name else 512-2
 
         # 4096 BPE tokens (bigbird)
         # or 512 BPE tokens (bert)
-        self.tokenizer = AutoTokenizer.from_pretrained(model_path)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
 
     def embed(self, sequences: List[str], disable_tqdm: bool = False, remove_special_tokens: bool = True, upsample_embeddings: bool = False):
         """

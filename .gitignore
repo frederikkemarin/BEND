@@ -2,10 +2,12 @@
 scripts/submit.sh
 # hydra logs
 outputs/
+slurm*out
 data/
 downstream_tasks/
 submit.sh
 multirun/
+nohup.out
 
 # Byte-compiled / optimized / DLL files
 **/__pycache__/

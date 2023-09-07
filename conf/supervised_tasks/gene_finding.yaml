@@ -1,12 +1,30 @@
 defaults:
-  - datadims : [label_dims,embedding_dims]
+  - datadims : [label_dims,embedding_dims, downstream_downsample]
+  - hydra : multirun 
+  - override hydra/launcher: joblib # ability to launch jobs in parallel fashion
   - _self_
-hydra : 
+hydra :
   searchpath:
-    #- pkg://conf
     - file://conf 
+  sweeper:
+    params:
+      embedder : gena-lm-bigbird-base-t2t,
+                 gena-lm-bert-large-t2,
+                 hyenadna-tiny-1k,
+                 hyenadna-small-32k,
+                 hyenadna-medium-160k,
+                 hyenadna-medium-450k,
+                 hyenadna-large-1m,
+                 dnabert6,
+                 resnetlm,
+                 nt_transformer_ms,
+                 nt_transformer_human_ref,
+                 nt_transformer_1000g,
+                 dnabert2,
+                 onehot
+                 awdlstm
 task : gene_finding 
-embedder : resnetlm
+embedder : onehot
 output_dir: ./downstream_tasks/${task}/${embedder}/
 model:
   _target_: bend.models.downstream.CNN
@@ -14,7 +32,6 @@ model:
   output_size: ${datadims.${task}}
   hidden_size: 64
   kernel_size: 3
-  upsample_factor: null
 optimizer : 
   _target_ : torch.optim.AdamW 
   lr : 0.003
@@ -25,7 +42,7 @@ data:
   batch_size : 64
   num_workers : 0
   padding_value : -100
-  shuffle : 5000
+  shuffle : 1000
   data_dir : ./data/${task}/${embedder}/
   train_data : [train.tfrecord]
   valid_data : [valid.tfrecord]
@@ -41,5 +58,3 @@ params:
   activation : none
 wandb:
   mode : disabled 
-
-

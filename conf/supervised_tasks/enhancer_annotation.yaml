@@ -1,0 +1,61 @@
+defaults:
+  - datadims : [label_dims,embedding_dims, downstream_downsample]
+  - hydra : multirun 
+  - override hydra/launcher: joblib # ability to launch jobs in parallel fashion
+  - _self_
+hydra :
+  searchpath:
+    - file://conf 
+  sweeper:
+    params:
+      data.cross_validation: range(1,11)
+      embedder : gena-lm-bigbird-base-t2t,
+                 gena-lm-bert-large-t2,
+                 hyenadna-tiny-1k,
+                 hyenadna-small-32k,
+                 hyenadna-medium-160k,
+                 hyenadna-medium-450k,
+                 hyenadna-large-1m,
+                 dnabert6,
+                 resnetlm,
+                 nt_transformer_ms,
+                 nt_transformer_human_ref,
+                 nt_transformer_1000g,
+                 dnabert2,
+                 onehot,
+                 awdlstm
+embedder : onehot
+task : enhancer_annotation 
+output_dir: ./downstream_tasks/${task}/${embedder}/split_${data.cross_validation}
+model:
+  _target_: bend.models.downstream.CNN
+  input_size: ${datadims.${embedder}}
+  output_size: ${datadims.${task}}
+  hidden_size: 2
+  kernel_size: 3
+  output_downsample_window: ${datadims.output_downsample_window.${task}}
+optimizer : 
+  _target_ : torch.optim.AdamW 
+  lr : 0.001
+  weight_decay: 0.01
+data:
+  _target_: bend.utils.data_downstream.get_data
+  batch_size : 8
+  num_workers : 0
+  padding_value : -100
+  shuffle : 100
+  parent_dir: ./data/
+  data_dir : ${data.parent_dir}/${task}/${embedder}/
+  cross_validation : 1 # which split to run in the cross validation
+params:
+  epochs: 100
+  load_checkpoint: true
+  mode: train
+  gradient_accumulation_steps: 1
+  criterion: bce
+  class_weights:
+    - 82.86
+  metric : auprc
+  activation : none
+wandb:
+  mode : disabled 

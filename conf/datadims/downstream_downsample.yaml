@@ -1,0 +1,7 @@
+# downstream model params that are dependent on the task
+output_downsample_window: # how much to downsample the output by
+  enhancer_annotation : 128
+  gene_finding : null 
+  histone_modification : 512
+  chromatin_accessibility : 512
+  cpg_methylation: 512
