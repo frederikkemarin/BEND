@@ -39,6 +39,8 @@ def run_experiment(cfg: DictConfig) -> None:
     print('device', device)
     # instantiate model 
     model = hydra.utils.instantiate(cfg.model).to(device).float()
+    if cfg.embedder == 'resnet-supervised':
+        
     # put model on dataparallel
     if torch.cuda.device_count() > 1:
         from bend.models.downstream import CustomDataParallel
