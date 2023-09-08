@@ -1,4 +1,5 @@
 onehot: 5
+resnet-supervised : 256
 gpn: 512
 nt_transformer_2B5_1000G: 2560
 nt_transformer_ms: 2560
