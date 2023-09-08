@@ -107,6 +107,7 @@ class CNN(nn.Module):
                  kernel_size=3, 
                  upsample_factor : Union[bool, int] = False, 
                  output_downsample_window = None,
+                 encoder = None,
                  *args, **kwargs):
         """
         Build a two-layer CNN with step size 1, ReLU activation, and a linear layer.
@@ -128,6 +129,7 @@ class CNN(nn.Module):
             This is done by taking the average of the output values in the window.
         """
         super(CNN, self).__init__()
+        self.encoder = encoder 
         self.output_size = output_size
         self.onehot_embedding = OneHotEmbedding(input_size)
         if upsample_factor: 
@@ -154,7 +156,7 @@ class CNN(nn.Module):
         self.softplus = nn.Softplus()
         self.sigmoid = nn.Sigmoid()
         
-    def forward(self, x, activation = 'none', length = None):
+    def forward(self, x, activation = 'none', length = None, **kwargs):
         """
         Forward pass of the CNN.
 
@@ -176,6 +178,8 @@ class CNN(nn.Module):
         x = self.onehot_embedding(x)
         if hasattr(self, 'upsample'):
             x = self.upsample(x)[:, :length]
+        if self.encoder is not None:
+            x = self.encoder(input_ids=x, **kwargs).last_hidden_state
         # 1st conv layer
         x = self.conv1(x)
         # 2nd conv layer 
