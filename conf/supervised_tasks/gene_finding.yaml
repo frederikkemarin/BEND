@@ -23,6 +23,7 @@ hydra :
                  dnabert2,
                  onehot
                  awdlstm
+                 resnet-supervised
 task : gene_finding 
 embedder : onehot
 output_dir: ./downstream_tasks/${task}/${embedder}/
