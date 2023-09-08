@@ -38,7 +38,10 @@ def run_experiment(cfg: DictConfig) -> None:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print('device', device)
     # instantiate model 
-    model = hydra.utils.instantiate(cfg.model).to(device).float()
+    #encoder = hydra.utils.instantiate(cfg.misc.resnet_encoder) if cfg.embedder == 'resnet-supervised' else None, 
+    model = hydra.utils.instantiate(cfg.model, 
+                                    encoder = cfg.misc.resnet_encoder if cfg.embedder == 'resnet-supervised' else None).to(device).float()
+        
     # put model on dataparallel
     if torch.cuda.device_count() > 1:
         from bend.models.downstream import CustomDataParallel
@@ -62,6 +65,7 @@ def run_experiment(cfg: DictConfig) -> None:
         criterion = BCEWithLogitsLoss(class_weights=torch.tensor(cfg.params.class_weights).to(device) if cfg.params.class_weights is not None else None)
 
     # init dataloaders 
+    if 'supervised' in cfg.embedder : cfg.embedder = 'onehot'
     train_loader, val_loader, test_loader = hydra.utils.instantiate(cfg.data) # instantiate dataloaders
     # instantiate trainer
     trainer = BaseTrainer(model = model, optimizer = optimizer, criterion = criterion, 
