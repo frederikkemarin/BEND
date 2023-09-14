@@ -306,6 +306,7 @@ class BaseTrainer:
         '''
 
         checkpoints = [f for f in os.listdir(f'{self.config.output_dir}/checkpoints/') if f.endswith('.pt')]
+        checkpoints = sorted(checkpoints, key=lambda x: int(x.split('_')[1].split('.')[0]))
         if len(checkpoints) == 0 or not load_checkpoint:
             print('No checkpoints found, starting from scratch')
             return 
