@@ -24,6 +24,7 @@ hydra :
                  dnabert2,
                  onehot
                  awdlstm
+                 resnet-supervised
 embedder : onehot
 task : chromatin_accessibility 
 output_dir: ./downstream_tasks/${task}/${embedder}/

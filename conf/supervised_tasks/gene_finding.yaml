@@ -22,8 +22,8 @@ hydra :
                  nt_transformer_human_ref,
                  nt_transformer_1000g,
                  dnabert2,
-                 onehot
-                 awdlstm
+                 onehot,
+                 awdlstm,
                  resnet-supervised
 task : gene_finding 
 embedder : onehot

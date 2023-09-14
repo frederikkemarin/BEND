@@ -22,8 +22,9 @@ hydra :
                  nt_transformer_human_ref,
                  nt_transformer_1000g,
                  dnabert2,
-                 onehot
-                 awdlstm
+                 onehot,
+                 awdlstm,
+                 resnet-supervised
 embedder : onehot
 task : histone_modification 
 output_dir: ./downstream_tasks/${task}/${embedder}/
