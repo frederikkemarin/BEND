@@ -488,7 +488,7 @@ class BaseTrainer:
         """
         df = pd.read_csv(f'{self.config.output_dir}/losses.csv')
         if checkpoint is None:
-            checkpoint = pd.DataFrame(df.iloc[df["val_loss"].idxmin()]).T.reset_index(drop=True) 
+            checkpoint = pd.DataFrame(df.iloc[df[f"val_{self.config.params.metric}"].idxmax()]).T.reset_index(drop=True) 
         # load checkpoint
         print(f'{self.config.output_dir}/checkpoints/epoch_{int(checkpoint["Epoch"].iloc[0])}.pt')
         epoch, train_loss, val_loss, val_metric = self._load_checkpoint(f'{self.config.output_dir}/checkpoints/epoch_{int(checkpoint["Epoch"].iloc[0])}.pt')
