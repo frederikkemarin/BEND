@@ -1,7 +1,7 @@
 defaults:
   - datadims : [label_dims,embedding_dims, downstream_downsample]
-  - hydra : multirun 
   - misc : resnet_supervised
+  - hydra : multirun 
   - override hydra/launcher: joblib # ability to launch jobs in parallel fashion
   - _self_
 hydra :
@@ -24,8 +24,8 @@ hydra :
                  nt_transformer_1000g,
                  dnabert2,
                  onehot,
-                 awdlstm,
-                 resnet-supervised
+                 awdlstm
+                 #resnet-supervised
 embedder : onehot
 task : enhancer_annotation 
 output_dir: ./downstream_tasks/${task}/${embedder}/split_${data.cross_validation}
