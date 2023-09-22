@@ -5,7 +5,7 @@
 [![Documentation Status](https://readthedocs.org/projects/bend/badge/?version=latest)](https://bend.readthedocs.io/en/latest/?badge=latest)
 
 ## Documentation
-[Documentation for the BEND code repository](https://bend.readthedocs.io/en/latest/?badge=latest).
+Documentation is available but the link is hidden for the purpose of anonymity.
 
 ## Data
 
