@@ -23,8 +23,8 @@ hydra :
                  nt_transformer_1000g,
                  dnabert2,
                  onehot,
-                 awdlstm,
-                 resnet-supervised
+                 awdlstm
+                 #resnet-supervised
 embedder : onehot
 task : histone_modification 
 output_dir: ./downstream_tasks/${task}/${embedder}/
@@ -34,19 +34,20 @@ model:
   output_size: ${datadims.${task}}
   hidden_size: 64
   kernel_size: 3
-  output_downsample_window : 512
+  output_downsample_window : ${datadims.output_downsample_window.${task}}
 optimizer : 
   _target_ : torch.optim.AdamW 
   lr : 0.003
   weight_decay: 0.01
 data:
   _target_: bend.utils.data_downstream.get_data
-  data_dir : ./data/${task}/${embedder}/
+  parent_dir: ./data/
+  data_dir : ${data.parent_dir}/${task}/${embedder}/
   cross_validation : false
   batch_size : 256
   num_workers : 0
   padding_value : -100
-  shuffle : 200
+  shuffle : 100
   train_data : [train.tfrecord]
   valid_data : [valid.tfrecord]
   test_data :  [test.tfrecord]
