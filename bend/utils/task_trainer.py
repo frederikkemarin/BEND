@@ -278,7 +278,7 @@ class BaseTrainer:
             metric =  matthews_corrcoef(y_true.numpy().ravel(), y_pred.numpy().ravel())
     
         elif self.config.params.metric == 'auroc':
-            if self.config.task == 'histone_modification' or self.config.task == 'chromatin_accessibility':
+            if self.config.task in ['histone_modification','chromatin_accessibility', 'cpg_methylation']: #self.config.task == 'histone_modification' or self.config.task == 'chromatin_accessibility':
                 # save y_true and y_pred 
                 metric = roc_auc_score(y_true.numpy(), y_pred.numpy(), average = None)
             else:
