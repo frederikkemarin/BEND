@@ -4,7 +4,7 @@ train_on_task.py
 Train a model on a downstream task.
 '''
 import hydra 
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig, OmegaConf, open_dict
 import torch
 from  bend.utils.task_trainer import BaseTrainer,  MSELoss, BCEWithLogitsLoss, PoissonLoss, CrossEntropyLoss
 import wandb
@@ -38,10 +38,17 @@ def run_experiment(cfg: DictConfig) -> None:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print('device', device)
     # instantiate model 
-    #encoder = hydra.utils.instantiate(cfg.misc.resnet_encoder) if cfg.embedder == 'resnet-supervised' else None, 
-    model = hydra.utils.instantiate(cfg.model, 
-                                    encoder = cfg.misc.resnet_encoder if cfg.embedder == 'resnet-supervised' else None).to(device).float()
-        
+    # initialization for supervised models
+    if cfg.embedder  == 'resnet-supervised':
+        OmegaConf.set_struct(cfg, True)
+        with open_dict(cfg):
+            cfg.model.encoder = cfg.supervised_encoder[cfg.embedder]
+    if cfg.embedder == 'basset-supervised': 
+        OmegaConf.set_struct(cfg, True)
+        with open_dict(cfg):
+            cfg.model.update(cfg.supervised_encoder[cfg.embedder])
+    model = hydra.utils.instantiate(cfg.model).to(device).float()
+    print(model)
     # put model on dataparallel
     if torch.cuda.device_count() > 1:
         from bend.models.downstream import CustomDataParallel

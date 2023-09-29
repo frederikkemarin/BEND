@@ -1,6 +1,6 @@
 defaults:
   - datadims : [label_dims,embedding_dims, downstream_downsample]
-  - misc : resnet_supervised
+  - supervised_encoder : [resnet-supervised, basset-supervised]
   - hydra : multirun 
   - override hydra/launcher: joblib # ability to launch jobs in parallel fashion
   - _self_
@@ -24,7 +24,8 @@ hydra :
                  dnabert2,
                  onehot,
                  awdlstm,
-                 resnet-supervised
+                 resnet-supervised,
+                 basset-supervised
 task : gene_finding 
 embedder : onehot
 output_dir: ./downstream_tasks/${task}/${embedder}/
