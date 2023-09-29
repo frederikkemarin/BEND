@@ -159,7 +159,8 @@ def embed_from_bed(bed, reference_fasta, embedder, hdf5_file= None,
         if hdf5_file is not None: 
             labels = hdf5_file['labels'][n + (chunk*chunk_size)]
         else: 
-            labels = list(map(int, line[label_column_idx].split(',')))
+            labels = line[label_column_idx]
+            labels = list(map(int, labels.split(','))) if isinstance(labels, str) else [] # if no label for sample
             labels = multi_hot(labels, depth=label_depth)
         # get sequence
         sequence = fasta.fetch(chrom, start, end, strand = strand, flank = flank) # categorical labels
