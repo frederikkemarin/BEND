@@ -179,7 +179,7 @@ class CNN(nn.Module):
         if hasattr(self, 'upsample'):
             x = self.upsample(x)[:, :length]
         if self.encoder is not None:
-            x = self.encoder(input_ids=x, **kwargs).last_hidden_state
+            x = self.encoder(x)
         # 1st conv layer
         x = self.conv1(x)
         # 2nd conv layer 
@@ -274,14 +274,14 @@ class ConvNetForSupervised(nn.Module):
         self.encoder = ConvNetModel(self.config)
 
 
-        self.downstream_cnn = CNN(input_size = hidden_size, output_size = output_size,
-                                    hidden_size = hidden_size_downstream,
-                                    kernel_size = kernel_size_downstream,
-                                    upsample_factor = upsample_factor,
-                                    output_downsample_window= output_downsample_window)
+        #self.downstream_cnn = CNN(input_size = hidden_size, output_size = output_size,
+        #                            hidden_size = hidden_size_downstream,
+        #                            kernel_size = kernel_size_downstream,
+        #                            upsample_factor = upsample_factor,
+        #                            output_downsample_window= output_downsample_window)
         self.softmax =  nn.Softmax(dim = -1)
 
-    def forward(self, x, activation = 'none', **kwargs):
+    def forward(self, x, **kwargs):
         """
         Forward pass of the model.
 
@@ -299,8 +299,8 @@ class ConvNetForSupervised(nn.Module):
 
         """
         x = self.encoder(input_ids=x, **kwargs).last_hidden_state
-        x = self.downstream_cnn(x, activation = activation)
-
+        #x = self.downstream_cnn(x, activation = activation, length = length, **kwargs)
+        
         return x
 
     
