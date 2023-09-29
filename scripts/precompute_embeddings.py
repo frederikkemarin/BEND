@@ -41,7 +41,7 @@ def run_experiment(cfg: DictConfig) -> None:
             
         # embed in chunks
         for chunk in cfg.chunk: 
-            print(f'Embedding chunk {chunk}')
+            print(f'Embedding chunk {chunk}/len({cfg.chunk})')
             gen = sequtils.embed_from_bed(**cfg[cfg.task], embedder = embedder, split = split, chunk = chunk, chunk_size = cfg.chunk_size,   
                                         upsample_embeddings = cfg[cfg.model]['upsample_embeddings'] if 'upsample_embeddings' in cfg[cfg.model] else False)
             # save the embeddings to tfrecords 
