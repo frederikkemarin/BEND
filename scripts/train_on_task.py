@@ -1,16 +1,29 @@
 '''
-Only train the downstream model on the embeddings 
+train_on_task.py
+----------------
+Train a model on a downstream task.
 '''
 import hydra 
 from omegaconf import DictConfig, OmegaConf
 import torch
 from  bend.utils.task_trainer import BaseTrainer,  MSELoss, BCEWithLogitsLoss, PoissonLoss, CrossEntropyLoss
 import wandb
+from bend.models.downstream import CustomDataParallel
 import os
+import sys
 
 # load config 
-@hydra.main(config_path="conf", config_name=None, version_base=None)
+@hydra.main(config_path=f"../conf/supervised_tasks/", config_name=None ,version_base=None) #
 def run_experiment(cfg: DictConfig) -> None:
+    """
+    Run a supervised task experiment.
+    This function is called by hydra.
+    
+    Parameters
+    ----------
+    cfg : DictConfig
+        Hydra configuration object.
+    """
     wandb.config = OmegaConf.to_container(
         cfg, resolve=True, throw_on_missing=True
         )
@@ -25,11 +38,15 @@ def run_experiment(cfg: DictConfig) -> None:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print('device', device)
     # instantiate model 
-    model = hydra.utils.instantiate(cfg.model).to(device).float()
+    #encoder = hydra.utils.instantiate(cfg.misc.resnet_encoder) if cfg.embedder == 'resnet-supervised' else None, 
+    model = hydra.utils.instantiate(cfg.model, 
+                                    encoder = cfg.misc.resnet_encoder if cfg.embedder == 'resnet-supervised' else None).to(device).float()
+        
     # put model on dataparallel
     if torch.cuda.device_count() > 1:
+        from bend.models.downstream import CustomDataParallel
         print("Let's use", torch.cuda.device_count(), "GPUs!")
-        model = torch.nn.DataParallel(model)
+        model = CustomDataParallel(model)
     print(model)
 
     # instantiate optimizer
@@ -45,9 +62,10 @@ def run_experiment(cfg: DictConfig) -> None:
     elif cfg.params.criterion == 'mse':
         criterion = MSELoss()
     elif cfg.params.criterion == 'bce':
-        criterion = BCEWithLogitsLoss()
+        criterion = BCEWithLogitsLoss(class_weights=torch.tensor(cfg.params.class_weights).to(device) if cfg.params.class_weights is not None else None)
 
     # init dataloaders 
+    if 'supervised' in cfg.embedder : cfg.data.data_dir = cfg.data.data_dir.replace(cfg.embedder, 'onehot')
     train_loader, val_loader, test_loader = hydra.utils.instantiate(cfg.data) # instantiate dataloaders
     # instantiate trainer
     trainer = BaseTrainer(model = model, optimizer = optimizer, criterion = criterion, 

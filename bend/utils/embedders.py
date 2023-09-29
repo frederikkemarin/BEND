@@ -1,30 +1,19 @@
 '''
-Utilities to compute embeddings from various models.  
-The following models are supported:
+embedders.py
+------------
+Wrapper classes for embedding sequences with pretrained DNA language models using a common interface.
+The wrapper classes handle loading the models and tokenizers, and embedding the sequences. As far as possible,
+models are downloaded automatically.
+They also handle removal of special tokens, and optionally upsample the embeddings to the original sequence length.
 
-- GPN
-- DNABERT
-- Nucleotide Transformer
-- AWD-LSTM
-- ResNet-LM
+Embedders can be used as follows. Please check the individual classes for more details on the arguments.
 
-Usage: either as functions or as classes.
-```
+``embedder = EmbedderClass(model_name, some_additional_config_argument=6)``
 
+``embedding = embedder(sequence, remove_special_tokens=True, upsample_embeddings=True)``
 
-# get any of the embedders
-embedder = GPNEmbedder()
-embedder = DNABertEmbedder('path/to/checkpoint', kmer=6)
-embedder = NucleotideTransformerEmbedder('checkpoint_name')
-embedder = AWDLSTMEmbedder('path/to/checkpoint')
-embedder = ConvNetEmbedder('path/to/checkpoint')
-
-# embed
-sequences =  ["ATGCCCTGGC", "AATACGGT"]
-embedder.embed(sequences, disable_tqdm=True)
-```
-    
 '''
+
 
 
 import torch
@@ -58,21 +47,77 @@ device =  torch.device("cuda" if torch.cuda.is_available() else "cpu")
 ##
 
 class BaseEmbedder():
+    """Base class for embedders.
+    All embedders should inherit from this class.
+    """
     def __init__(self, *args, **kwargs):
+        """Initialize the embedder. Calls `load_model` with the given arguments.
+
+        Parameters
+        ----------
+        *args
+            Positional arguments. Passed to `load_model`.
+        **kwargs
+            Keyword arguments. Passed to `load_model`.
+        """
         self.load_model(*args, **kwargs)
 
     def load_model(self, *args, **kwargs):
+        """Load the model. Should be implemented by the inheriting class."""
         raise NotImplementedError
     
-    def embed(self, *args, **kwargs):
+    def embed(self, sequences:str, *args, **kwargs):
+        """Embed a sequence. Should be implemented by the inheriting class.
+        
+        Parameters
+        ----------
+        sequences : str
+            The sequences to embed.
+        """
         raise NotImplementedError
 
-    def __call__(self, sequence, *args, **kwargs):
+    def __call__(self, sequence: str, *args, **kwargs):
+        """Embed a single sequence. Calls `embed` with the given arguments.
+        
+        Parameters
+        ----------
+        sequence : str
+            The sequence to embed.
+        *args
+            Positional arguments. Passed to `embed`.
+        **kwargs
+            Keyword arguments. Passed to `embed`.
+
+        Returns
+        -------
+        np.ndarray
+            The embedding of the sequence.
+        """
         return self.embed([sequence], *args, disable_tqdm=True, **kwargs)[0]
 
+
 class GPNEmbedder(BaseEmbedder):
+    '''Embed using the GPN model https://www.biorxiv.org/content/10.1101/2022.08.22.504706v1'''
 
     def load_model(self, model_name: str = "songlab/gpn-brassicales" , **kwargs):
+        """Load the GPN model.
+
+        Parameters
+        ----------
+        model_name : str
+            The name of the model to load. Defaults to "songlab/gpn-brassicales".
+            When providing a name, the model will be loaded from the HuggingFace model hub.
+            Alternatively, you can provide a path to a local model directory.
+
+        Raises
+        ------
+        ModuleNotFoundError
+            If the gpn module is not installed.
+
+        Notes
+        -----
+        The gpn module can be installed with `pip install git+https://github.com/songlab-cal/gpn.git`
+        """
         try:
             import gpn.model
         except ModuleNotFoundError as e:
@@ -86,7 +131,25 @@ class GPNEmbedder(BaseEmbedder):
         self.model.eval()
 
     def embed(self, sequences: List[str], disable_tqdm: bool = False, upsample_embeddings: bool = False) -> List[np.ndarray]:
-        '''Run the GPN model https://www.biorxiv.org/content/10.1101/2022.08.22.504706v1'''
+        """
+        Embed a list of sequences.
+        
+        Parameters
+        ----------
+        sequences : List[str]
+            The sequences to embed.
+        disable_tqdm : bool, optional
+            Whether to disable the tqdm progress bar. Defaults to False.
+        upsample_embeddings : bool, optional
+            Whether to upsample the embeddings to the length of the input sequence. Defaults to False.
+            Only provided for compatibility with other embedders. GPN embeddings are already the same length as the input sequence.
+
+        Returns
+        -------
+        List[np.ndarray]
+            The embeddings of the sequences.
+        """
+        # '''Run the GPN model https://www.biorxiv.org/content/10.1101/2022.08.22.504706v1'''
 
         embeddings = []
         with torch.no_grad():
@@ -103,14 +166,26 @@ class GPNEmbedder(BaseEmbedder):
 
 ##
 ## DNABert https://doi.org/10.1093/bioinformatics/btab083
-##
+## Download from https://github.com/jerryji1993/DNABERT
 
 class DNABertEmbedder(BaseEmbedder):
+    '''Embed using the DNABert model https://doi.org/10.1093/bioinformatics/btab083'''
 
     def load_model(self, 
                    model_path: str = '../../external-models/DNABERT/', 
                    kmer: int = 6, 
                    **kwargs):
+        """Load the DNABert model.
+
+        Parameters
+        ----------
+        model_path : str
+            The path to the model directory. Defaults to "../../external-models/DNABERT/".
+            The DNABERT models need to be downloaded manually as indicated in the DNABERT repository at https://github.com/jerryji1993/DNABERT.
+        kmer : int
+            The kmer size of the model. Defaults to 6.
+
+        """
 
         dnabert_path = model_path
         #dnabert_path = f'{dnabert_path}/DNABERT{kmer}/'
@@ -129,6 +204,25 @@ class DNABertEmbedder(BaseEmbedder):
         self.kmer = kmer
 
     def embed(self, sequences: List[str], disable_tqdm: bool = False, remove_special_tokens: bool = True, upsample_embeddings: bool = False):
+        """
+        Embed a list of sequences.
+
+        Parameters
+        ----------
+        sequences : List[str]
+            The sequences to embed.
+        disable_tqdm : bool, optional
+            Whether to disable the tqdm progress bar. Defaults to False.
+        remove_special_tokens : bool, optional
+            Whether to remove the special tokens from the embeddings. Defaults to True.
+        upsample_embeddings : bool, optional
+            Whether to upsample the embeddings to the length of the input sequence. Defaults to False.
+        
+        Returns
+        -------
+        List[np.ndarray]
+            The embeddings of the sequences.
+        """
         embeddings = []
         with torch.no_grad():
             for sequence in tqdm(sequences, disable=disable_tqdm):
@@ -216,11 +310,23 @@ class DNABertEmbedder(BaseEmbedder):
 
 
 
-
+# https://www.biorxiv.org/content/10.1101/2023.01.11.523679v2.full
 class NucleotideTransformerEmbedder(BaseEmbedder):
+    """
+    Embed using the Nuclieotide Transformer (NT) model https://www.biorxiv.org/content/10.1101/2023.01.11.523679v2.full
+    """
 
     def load_model(self, model_name, **kwargs):
+        """
+        Load the Nuclieotide Transformer (NT) model.
 
+        Parameters
+        ----------
+        model_name : str
+            The name of the model to load.
+            When providing a name, the model will be loaded from the HuggingFace model hub.
+            Alternatively, you can provide a path to a local model directory.
+        """
 
         # Get pretrained model
         self.model = AutoModel.from_pretrained(model_name)
@@ -230,8 +336,25 @@ class NucleotideTransformerEmbedder(BaseEmbedder):
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
 
     def embed(self, sequences: List[str], disable_tqdm: bool = False, remove_special_tokens: bool = True, upsample_embeddings: bool = False):
-        '''Tokenizes and embeds sequences. CLS token is removed from the output if remove_special_tokens=True.'''
+        """
+        Embed sequences using the Nuclieotide Transformer (NT) model.
         
+        Parameters
+        ----------
+        sequences : List[str]
+            List of sequences to embed.
+        disable_tqdm : bool, optional
+            Whether to disable the tqdm progress bar. Defaults to False.
+        remove_special_tokens : bool, optional
+             Whether to remove the special tokens from the embeddings. Defaults to True.
+        upsample_embeddings : bool, optional
+            Whether to upsample the embeddings to the length of the input sequence. Defaults to False.
+
+        Returns
+        -------
+        List[np.ndarray]
+            List of embeddings.
+        """
         cls_tokens = []
         embeddings = []
         
@@ -279,8 +402,21 @@ class NucleotideTransformerEmbedder(BaseEmbedder):
 
 
 class AWDLSTMEmbedder(BaseEmbedder):
+    """
+    Embed using the AWD-LSTM (https://arxiv.org/abs/1708.02182) baseline LM trained in BEND.
+    """
 
     def load_model(self, model_path, **kwargs):
+        """
+        Load the AWD-LSTM baseline LM trained in BEND.
+
+        Parameters
+        ----------
+        model_path : str
+            The path to the model directory.
+            If the model path does not exist, it will be downloaded from https://sid.erda.dk/cgi-sid/ls.py?share_id=dbQM0pgSlM&current_dir=pretrained_models&flags=f
+        """
+
 
         # download model if not exists
         if not os.path.exists(model_path):
@@ -295,7 +431,24 @@ class AWDLSTMEmbedder(BaseEmbedder):
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
 
     def embed(self, sequences: List[str], disable_tqdm: bool = False, upsample_embeddings: bool = False):
-        '''Tokenizes and embeds sequences. CLS token is removed from the output.'''
+        """
+        Embed sequences using the AWD-LSTM baseline LM trained in BEND.
+
+        Parameters
+        ----------
+        sequences : List[str]
+            List of sequences to embed.
+        disable_tqdm : bool, optional
+            Whether to disable the tqdm progress bar. Defaults to False.
+        upsample_embeddings : bool, optional
+            Whether to upsample the embeddings to the length of the input sequence. Defaults to False.
+            Only provided for compatibility with other embedders. GPN embeddings are already the same length as the input sequence.
+
+        Returns
+        -------
+        List[np.ndarray]
+            List of embeddings.
+        """
         embeddings = []
         with torch.no_grad():
             for s in tqdm(sequences, disable=disable_tqdm):
@@ -308,9 +461,21 @@ class AWDLSTMEmbedder(BaseEmbedder):
                 # embeddings.append(embedding.detach().cpu().numpy()[:,1:])
             
         return embeddings
-    
+
 class ConvNetEmbedder(BaseEmbedder):
+    """
+    Embed using the GPN-inspired ConvNet baseline LM trained in BEND.
+    """
     def load_model(self, model_path, **kwargs):
+        """
+        Load the GPN-inspired ConvNet baseline LM trained in BEND.
+
+        Parameters
+        ----------
+        model_path : str
+            The path to the model directory.
+            If the model path does not exist, it will be downloaded from https://sid.erda.dk/cgi-sid/ls.py?share_id=dbQM0pgSlM&current_dir=pretrained_models&flags=f
+        """
 
         logging.set_verbosity_error()
         if not os.path.exists(model_path):
@@ -323,6 +488,24 @@ class ConvNetEmbedder(BaseEmbedder):
         self.model = ConvNetModel.from_pretrained(model_path).to(device).eval()
     
     def embed(self, sequences: List[str], disable_tqdm: bool = False, upsample_embeddings: bool = False):
+        """
+        Embed sequences using the GPN-inspired ConvNet baseline LM trained in BEND.
+
+        Parameters
+        ----------
+        sequences : List[str]
+            List of sequences to embed.
+        disable_tqdm : bool, optional
+            Whether to disable the tqdm progress bar. Defaults to False.
+        upsample_embeddings : bool, optional
+            Whether to upsample the embeddings to the length of the input sequence. Defaults to False.
+            Only provided for compatibility with other embedders. GPN embeddings are already the same length as the input sequence.
+
+        Returns
+        -------
+        List[np.ndarray]
+            List of embeddings.
+        """
         embeddings = [] 
         with torch.no_grad():
             for s in tqdm(sequences, disable=disable_tqdm):
@@ -336,34 +519,62 @@ class ConvNetEmbedder(BaseEmbedder):
         
 
 class GENALMEmbedder(BaseEmbedder):
-    '''https://www.biorxiv.org/content/10.1101/2023.06.12.544594v1.full'''
-    def load_model(self, model_path, **kwargs):
+    """
+    Embed using the GENA-LM model https://www.biorxiv.org/content/10.1101/2023.06.12.544594v1.full"""
+    def load_model(self, model_name, **kwargs):
+        """
+        Load the GENA-LM model.
 
-        if not any(['bigbird' in model_path, 'bert' in model_path]):
+        Parameters
+        ----------
+        model_name : str
+            The name of the model to load.
+            When providing a name, the model will be loaded from the HuggingFace model hub.
+            Alternatively, you can provide a path to a local model directory.
+        """
+
+        if not any(['bigbird' in model_name, 'bert' in model_name]):
             raise ValueError('Model path must contain either bigbird or bert in order to be loaded correctly.')
         
-        if 'bigbird' in model_path:
-            self.model = BigBirdModel.from_pretrained(model_path)
+        if 'bigbird' in model_name:
+            self.model = BigBirdModel.from_pretrained(model_name)
         else:
-            self.model = GenaLMBertModel.from_pretrained(model_path)
+            self.model = GenaLMBertModel.from_pretrained(model_name)
         self.model.to(device)
         self.model.eval()
 
-        self.max_length = 4096-2 if 'bigbird' in model_path else 512-2
+        self.max_length = 4096-2 if 'bigbird' in model_name else 512-2
 
         # 4096 BPE tokens (bigbird)
         # or 512 BPE tokens (bert)
-        self.tokenizer = AutoTokenizer.from_pretrained(model_path)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
 
     def embed(self, sequences: List[str], disable_tqdm: bool = False, remove_special_tokens: bool = True, upsample_embeddings: bool = False):
-        '''
-        Note that this model uses byte pair encoding.
-        upsample_embedding repeats BPE token embeddings so that each nucleotide has its own embedding.
-        The [CLS] and [SEP] tokens are removed from the output if remove_special_tokens is True.
+        """
+        Embed sequences using the GENA-LM model.
 
-        The handling of gaps in upsample_embeddings is not tested.
-        The second tokenizer, trained on T2T+1000G SNPs+Multispieces, includes a preprocessing step for long gaps: more than 10 consecutive N are replaced by a single - token.
-        '''
+        Parameters
+        ----------
+        sequences : List[str]
+            List of sequences to embed.
+        disable_tqdm : bool, optional
+            Whether to disable the tqdm progress bar. Defaults to False.
+        remove_special_tokens : bool, optional
+            Whether to remove the [CLS] and [SEP] tokens from the output. Defaults to True.
+        upsample_embeddings : bool, optional
+            Whether to upsample the embeddings to the length of the input sequence. Defaults to False.
+
+        Returns
+        -------
+        List[np.ndarray]
+            List of embeddings.
+        """
+        # Note that this model uses byte pair encoding.
+        # upsample_embedding repeats BPE token embeddings so that each nucleotide has its own embedding.
+        # The [CLS] and [SEP] tokens are removed from the output if remove_special_tokens is True.
+
+        # TODO The handling of gaps in upsample_embeddings is not tested extensively.
+        # The second tokenizer, trained on T2T+1000G SNPs+Multispieces, includes a preprocessing step for long gaps: more than 10 consecutive N are replaced by a single - token.
         embeddings = [] 
         with torch.no_grad():
             for s in tqdm(sequences, disable=disable_tqdm):
@@ -436,15 +647,29 @@ class GENALMEmbedder(BaseEmbedder):
 
 
 class HyenaDNAEmbedder(BaseEmbedder):
+    '''Embed using the HyenaDNA model https://arxiv.org/abs/2306.15794'''
     def load_model(self, model_path = 'pretrained_models/hyenadna/hyenadna-tiny-1k-seqlen', **kwargs):
-        '''Load the model from the checkpoint path
-        'hyenadna-tiny-1k-seqlen'   
-        'hyenadna-small-32k-seqlen'
-        'hyenadna-medium-160k-seqlen' 
-        'hyenadna-medium-450k-seqlen' 
-        'hyenadna-large-1m-seqlen' 
-        '''
+        # '''Load the model from the checkpoint path
+        # 'hyenadna-tiny-1k-seqlen'   
+        # 'hyenadna-small-32k-seqlen'
+        # 'hyenadna-medium-160k-seqlen' 
+        # 'hyenadna-medium-450k-seqlen' 
+        # 'hyenadna-large-1m-seqlen' 
+        # '''
         # you only need to select which model to use here, we'll do the rest!
+        """
+        Load the HyenaDNA model.
+
+        Parameters
+        ----------
+        model_path : str, optional
+            Path to the model checkpoint. Defaults to 'pretrained_models/hyenadna/hyenadna-tiny-1k-seqlen'.
+            If the path does not exist, the model will be downloaded from HuggingFace. Rather than just downloading the model,
+            HyenaDNA's `from_pretrained` method relies on cloning the HuggingFace-hosted repository, and using git lfs to download the model.
+            This requires git lfs to be installed on your system, and will fail if it is not.
+
+        
+        """
         checkpoint_path, model_name = os.path.split(model_path)
         max_lengths = {
             'hyenadna-tiny-1k-seqlen': 1024,
@@ -502,6 +727,25 @@ class HyenaDNAEmbedder(BaseEmbedder):
         )
 
     def embed(self, sequences: List[str], disable_tqdm: bool = False, remove_special_tokens: bool = True, upsample_embeddings: bool = False):
+        '''Embeds a list of sequences using the HyenaDNA model.
+        Parameters
+        ----------
+        sequences : List[str]
+            List of sequences to embed.
+        disable_tqdm : bool, optional
+            Whether to disable the tqdm progress bar. Defaults to False.
+        remove_special_tokens : bool, optional
+            Whether to remove the CLS and SEP tokens from the embeddings. Defaults to True.
+        upsample_embeddings : bool, optional
+            Whether to upsample the embeddings to match the length of the input sequences. Defaults to False.
+            Only provided for compatibility with other embedders. GPN embeddings are already the same length as the input sequence.
+        Returns
+        -------
+
+        embeddings : List[np.ndarray]
+            List of embeddings.
+        '''
+
 
     # # prep model and forward
     # model.to(device)
@@ -541,13 +785,25 @@ class HyenaDNAEmbedder(BaseEmbedder):
 
 
 class DNABert2Embedder(BaseEmbedder):
-    '''https://arxiv.org/pdf/2306.15006.pdf'''
-    def load_model(self, model_path = "zhihan1996/DNABERT-2-117M", **kwargs):
+    """
+    Embed using the DNABERT2 model https://arxiv.org/pdf/2306.15006.pdf
+    """
+    def load_model(self, model_name = "zhihan1996/DNABERT-2-117M", **kwargs):
+        """
+        Load the DNABERT2 model.
+
+        Parameters
+        ----------
+        model_name : str, optional
+            The name of the model to load. Defaults to "zhihan1996/DNABERT-2-117M".
+            When providing a name, the model will be loaded from the HuggingFace model hub.
+            Alternatively, you can provide a path to a local model directory.
+        """
 
 
         # keep the source in this repo to avoid using flash attn. 
-        self.model = DNABert2BertModel.from_pretrained(model_path)
-        self.tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
+        self.model = DNABert2BertModel.from_pretrained(model_name)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
         self.model.eval()
         self.model.to(device)
 
@@ -556,11 +812,29 @@ class DNABert2Embedder(BaseEmbedder):
 
 
     def embed(self, sequences: List[str], disable_tqdm: bool = False, remove_special_tokens: bool = True, upsample_embeddings: bool = False):
+        '''Embeds a list sequences using the DNABERT2 model.
+        
+        Parameters
+        ----------
+        sequences : List[str]
+            List of sequences to embed.
+        disable_tqdm : bool, optional
+            Whether to disable the tqdm progress bar. Defaults to False.
+        remove_special_tokens : bool, optional
+            Whether to remove the CLS and SEP tokens from the embeddings. Defaults to True.
+        upsample_embeddings : bool, optional
+            Whether to upsample the embeddings to match the length of the input sequences. Defaults to False.
+
+        Returns
+        -------
+        embeddings : List[np.ndarray]
+            List of embeddings.
         '''
-        Note that this model uses byte pair encoding.
-        upsample_embedding repeats BPE token embeddings so that each nucleotide has its own embedding.
-        The [CLS] and [SEP] tokens are removed from the output if remove_special_tokens is True.
-        '''
+        # '''
+        # Note that this model uses byte pair encoding.
+        # upsample_embedding repeats BPE token embeddings so that each nucleotide has its own embedding.
+        # The [CLS] and [SEP] tokens are removed from the output if remove_special_tokens is True.
+        # '''
         embeddings = []
         with torch.no_grad():
             for sequence in tqdm(sequences, disable=disable_tqdm):
@@ -633,22 +907,49 @@ class DNABert2Embedder(BaseEmbedder):
 categories_4_letters_unknown = ['A', 'C', 'G', 'N', 'T']
 
 class OneHotEmbedder(BaseEmbedder):
+    """Onehot encode sequences"""
 
     def __init__(self, nucleotide_categories = categories_4_letters_unknown):
+        """Get an onehot encoder for nucleotide sequences.
+        
+        Parameters
+        ----------
+        nucleotide_categories : List[str], optional
+            List of nucleotides in the alphabet. Defaults to ['A', 'C', 'G', 'N', 'T'].
+        """
         
         self.nucleotide_categories = nucleotide_categories
         
         self.label_encoder = LabelEncoder().fit(self.nucleotide_categories)
     
     def embed(self, sequences: List[str], disable_tqdm: bool = False, return_onehot: bool = False, upsample_embeddings: bool = False):
-        """Onehot endode sequences"""
+        """Onehot encode sequences.
+
+        Parameters
+        ----------
+        sequences : List[str]
+            List of sequences to embed.
+        disable_tqdm : bool, optional
+            Whether to disable the tqdm progress bar. Defaults to False.
+        return_onehot : bool, optional
+            Whether to return onehot encoded sequences. Defaults to False.
+            If false, returns integer encoded sequences.
+        upsample_embeddings : bool, optional
+            Whether to upsample the embeddings to match the length of the input sequences. Defaults to False.
+
+        Returns
+        -------
+        embeddings : List[np.ndarray]
+            List of one-hot encodings or integer encodings, depending on return_onehot.
+        """
+        # """Onehot endode sequences"""
         embeddings = []
         for s in tqdm(sequences, disable=disable_tqdm):
-            s = self.transform_integer(s, return_onehot = return_onehot)
+            s = self._transform_integer(s, return_onehot = return_onehot)
             embeddings.append(s)
         return embeddings
     
-    def transform_integer(self, sequence : str, return_onehot = False): # integer/onehot encode sequence
+    def _transform_integer(self, sequence : str, return_onehot = False): # integer/onehot encode sequence
         sequence = np.array(list(sequence))
         
         sequence = self.label_encoder.transform(sequence)

@@ -1,0 +1,4 @@
+mode : MULTIRUN
+output_subdir: null  
+launcher:
+  n_jobs: 4 # number of parallel jobs to run simultaneously, set to 1 for serial running

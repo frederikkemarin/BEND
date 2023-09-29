@@ -1,40 +1,45 @@
 defaults:
   - datadims : [label_dims,embedding_dims]
+  - hydra : multirun
+  - override hydra/launcher: joblib # ability to launch jobs in parallel fashion
   - _self_
 hydra : 
   searchpath:
     - file://conf 
+  sweeper:
+    params:
+      model: gena-lm-bigbird-base-t2t,
+             gena-lm-bert-large-t2,
+             hyenadna-tiny-1k,
+             hyenadna-small-32k,
+             hyenadna-medium-160k,
+             hyenadna-medium-450k,
+             hyenadna-large-1m,
+             dnabert6,
+             resnetlm,
+             awdlstm,
+             nt_transformer_ms,
+             nt_transformer_human_ref,
+             nt_transformer_1000g,
+             dnabert2,
+             onehot
+      task: 
+            gene_finding,
+            enhancer_annotation,
+            variant_effects,
+            histone_modification,
+            chromatin_accessibility
+            cpg_methylation
+
 data_dir : ./data/
 embedders_dir : ./pretrained_models/
-splits : 
-  - valid 
-  - test
-models : 
-  #- gena-lm-bigbird-base-t2t
-  #- gena-lm-bert-large-t2
-  #- hyenadna-tiny-1k
-  #- hyenadna-small-32k
-  #- hyenadna-medium-160k
-  #- hyenadna-medium-450k
-  #- hyenadna-large-1m
-  #- dnabert6
-  #- resnetlm
-  #- awdlstm
-  #- nt_transformer_ms
-  #- nt_transformer_human_ref
-  #- nt_transformer_1000g
-  #- dnabert2
-  #- onehot
-tasks : 
-  #- gene_finding
-  #- enhancer_annotation
-  #- variant_effects
-  - histone_modification
-  #- chromatin_accessibility
+splits : null
+model : nt_transformer_1000g
+task : gene_finding
 # model instatiators 
 dnabert2:
   _target_ : bend.utils.embedders.DNABert2Embedder
-  model_path : zhihan1996/DNABERT-2-117M
+  model_name : zhihan1996/DNABERT-2-117M
   upsample_embeddings : true
 dnabert6:
   _target_ : bend.utils.embedders.DNABertEmbedder
@@ -42,11 +47,11 @@ dnabert6:
   kmer : 6
 gena-lm-bigbird-base-t2t:
   _target_ : bend.utils.embedders.GENALMEmbedder
-  model_path : AIRI-Institute/gena-lm-bigbird-base-t2t
+  model_name : AIRI-Institute/gena-lm-bigbird-base-t2t
   upsample_embeddings : true
 gena-lm-bert-large-t2:
   _target_ : bend.utils.embedders.GENALMEmbedder
-  model_path : AIRI-Institute/gena-lm-bert-large-t2t 
+  model_name : AIRI-Institute/gena-lm-bert-large-t2t 
   upsample_embeddings : true
 hyenadna-large-1m:
   _target_ : bend.utils.embedders.HyenaDNAEmbedder
@@ -88,7 +93,7 @@ gene_finding:
   reference_fasta : ${data_dir}/genomes/GRCh38.primary_assembly.genome.fa
   hdf5_file : ${data_dir}/gene_finding/gene_finding.hdf5
   bed : ${data_dir}/gene_finding/gene_finding.bed 
-  read_reverse : true
+  read_strand : false
 enhancer_annotation:
   reference_fasta : ${data_dir}/genomes/GRCh38.primary_assembly.genome.fa
   hdf5_file : ${data_dir}/enhancer_annotation/enhancer_annotation.hdf5
@@ -110,4 +115,10 @@ chromatin_accessibility:
   read_strand : true
   hdf5_file : null
   label_depth : ${datadims.chromatin_accessibility}
+cpg_methylation:
+  bed : ${data_dir}/cpg_methylation/cpg_methylation.bed
+  reference_fasta : ${data_dir}/genomes/GRCh38.primary_assembly.genome.fa
+  read_strand : true
+  hdf5_file : null
+  label_depth : ${datadims.cpg_methylation}
 

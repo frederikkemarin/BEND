@@ -10,3 +10,4 @@ tensorflow-cpu>=2.12.0
 wandb>=0.13.5
 einops
 torchvision
+hydra-joblib-launcher

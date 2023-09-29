@@ -1,5 +1,7 @@
 """
-Trainer class for training downstream models on supervised tasks
+task_trainer.py
+===============
+Trainer class for training downstream models on supervised tasks.
 """
 import torch 
 import torch.nn as nn
@@ -12,20 +14,58 @@ from typing import Union
 import numpy as np
 
 class CrossEntropyLoss(nn.Module):
+    """
+    Cross entropy loss for classification tasks. Wrapper around `torch.nn.CrossEntropyLoss`
+    that takes care of the dimensionality of the input and target tensors.
+    """
     def __init__(self, 
                  ignore_index = -100, 
                  weight = None):
+        """
+        Get a CrossEntropyLoss object that can be used to train a model.
+
+        Parameters
+        ----------
+        ignore_index : int, optional
+            Index to ignore in the loss calculation. 
+            Passed to `torch.nn.CrossEntropyLoss`. The default is -100.
+        weight : torch.Tensor, optional
+            Weights to apply to the loss. Passed to `torch.nn.CrossEntropyLoss`.
+            The default is None.
+        """
         super(CrossEntropyLoss, self).__init__()
         self.ignore_index = ignore_index
         self.weight = weight
+        self.criterion = torch.nn.CrossEntropyLoss(ignore_index = self.ignore_index, 
+                                              weight=self.weight)
 
     def forward(self, pred, target):
-        criterion = torch.nn.CrossEntropyLoss(ignore_index = self.ignore_index, 
-                                              weight=self.weight)
-        return criterion(pred.permute(0, 2, 1), target)
+        """
+        Calculate the cross entropy loss for a given prediction and target.
+
+        Parameters
+        ----------
+        pred : torch.Tensor
+            Prediction tensor of logits.
+        target : torch.Tensor
+            Target tensor of labels.
+
+        Returns
+        -------
+        loss : torch.Tensor
+            Cross entropy loss.
+        """
+        
+        return self.criterion(pred.permute(0, 2, 1), target)
 
 class PoissonLoss(nn.Module):
+    """
+    Poisson loss for regression tasks.
+    """
     def __init__(self):
+        """
+        Get a PoissonLoss object that can be used to train a model.
+        """
         super(PoissonLoss, self).__init__()
     
     def _log(self, t, eps = 1e-20):
@@ -35,31 +75,104 @@ class PoissonLoss(nn.Module):
         return (pred - target * self._log(pred)).mean()  
 
     def forward(self, pred, target):
+        """
+        Calculate the poisson loss for a given prediction and target.
+
+        Parameters
+        ----------
+        pred : torch.Tensor
+            Prediction tensor.
+        target : torch.Tensor
+            Target tensor.
+
+        Returns
+        -------
+        loss : torch.Tensor
+            Poisson loss.
+        """
         return self._poisson_loss(target, pred)
     
 class BCEWithLogitsLoss(nn.Module):
-    def __init__(self):
+    """
+    BCEWithLogitsLoss for classification tasks. Wrapper around `torch.nn.BCEWithLogitsLoss`
+    that takes care of the dimensionality of the input and target tensors.
+    """
+    def __init__(self, class_weights : torch.Tensor = None, reduction : str = 'none'):
+        """
+        Get a BCEWithLogitsLoss object that can be used to train a model.
+        Parameters
+        ----------
+        class_weights : torch.Tensor
+            Weight for positive class
+        """
         super(BCEWithLogitsLoss, self).__init__()
-        self.criterion = torch.nn.BCEWithLogitsLoss(reduction = 'none')
-    
+        self.criterion = torch.nn.BCEWithLogitsLoss(reduction = reduction)
+        self.class_weights = class_weights
     def forward(self, pred, target, padding_value = -100):
-        if pred.dim() == 3:
-            loss =  self.criterion(pred.permute(0, 2, 1), target.float())
-        else: 
-            loss = self.criterion(pred, target.float())
+        """
+        Calculate the BCEWithLogitsLoss for a given prediction and target.
+
+        Parameters
+        ----------
+        pred : torch.Tensor
+            Prediction tensor of logits.
+        target : torch.Tensor
+            Target tensor of labels.
+        padding_value : int, optional
+            Value to ignore in the loss calculation. The default is -100.
+        Returns
+        -------
+        loss : torch.Tensor
+            BCEWithLogitsLoss.
+        """
+        #if pred.dim() == 3:
+        #    loss =  self.criterion(pred.permute(0, 2, 1), target.float())
+        #else: 
+        
+        loss = self.criterion(pred, target.float())
+        if self.class_weights is not None:
+            # multiply positive class with class_weights
+            
+            weight_tensor = torch.where(target == 1, self.class_weights, 1)
+            loss *= weight_tensor
         # remove loss for padded positions and return
         return torch.mean(loss[~target != padding_value])
     
 class MSELoss(nn.Module):
+    """
+    MSE loss for regression tasks. Wrapper around `torch.nn.MSELoss`
+    that takes care of the dimensionality of the input and target tensors.
+    """
     def __init__(self):
+        """
+        Get a MSELoss object that can be used to train a model.
+        """
         super(MSELoss, self).__init__()
     
     def forward(self, pred, target):
+        """
+        Calculate the MSE loss for a given prediction and target.
+
+        Parameters
+        ----------
+        pred : torch.Tensor
+            Prediction tensor.
+        target : torch.Tensor
+            Target tensor.
+
+        Returns
+        -------
+        loss : torch.Tensor
+            MSE loss.
+        """
         criterion = torch.nn.MSELoss()
         return criterion(pred.permute(0, 2, 1), target)
 
 class BaseTrainer:
-    ''''Perform training and validation steps for a given model and dataset'''
+    ''''Performs training and validation steps for a given model and dataset.
+    We use hydra to configure the trainer. The configuration is passed to the
+    trainer as an OmegaConf object.
+    '''
     def __init__(self, 
                 model, 
                 optimizer, 
@@ -68,6 +181,26 @@ class BaseTrainer:
                 config, 
                 overwrite_dir=False, 
                 gradient_accumulation_steps: int = 1, ):
+        """
+        Get a BaseTrainer object that can be used to train a model.
+
+        Parameters
+        ----------
+        model : torch.nn.Module
+            Model to train.
+        optimizer : torch.optim.Optimizer
+            Optimizer to use for training.
+        criterion : torch.nn.Module
+            Loss function to use for training.
+        device : torch.device
+            Device to use for training.
+        config : OmegaConf
+            Configuration object.
+        overwrite_dir : bool, optional
+            Whether to overwrite the output directory. The default is False.
+        gradient_accumulation_steps : int, optional
+            Number of gradient accumulation steps. The default is 1.
+        """
 
 
         self.model = model
@@ -84,11 +217,11 @@ class BaseTrainer:
     def _create_output_dir(self, path):
         os.makedirs(f'{path}/checkpoints/', exist_ok=True)
         if self.overwrite_dir or not os.path.exists(f'{path}/losses.csv'):
-            pd.DataFrame(columns = ['Epoch', 'train_loss', 'val_loss', f'val_{self.config.params.metric}']).to_csv(f'{path}/losses.csv')
+            pd.DataFrame(columns = ['Epoch', 'train_loss', 'val_loss', f'val_{self.config.params.metric}']).to_csv(f'{path}/losses.csv', index = False)
         return 
     
     def _load_checkpoint(self, checkpoint):
-        checkpoint = torch.load(checkpoint)
+        checkpoint = torch.load(checkpoint,  map_location=self.device)
         self.model.load_state_dict(checkpoint['model_state_dict'], strict=False)
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         epoch = checkpoint['epoch']
@@ -133,7 +266,7 @@ class BaseTrainer:
             y_true: true labels
             y_pred: predicted labels
         Returns:
-            metric: the metric value
+            metric (str): the metric value [mcc, auroc, pearsonr, auprc]
         '''
         # check if any padding in the target
         if torch.any(y_true  == self.config.data.padding_value):
@@ -173,6 +306,7 @@ class BaseTrainer:
         '''
 
         checkpoints = [f for f in os.listdir(f'{self.config.output_dir}/checkpoints/') if f.endswith('.pt')]
+        checkpoints = sorted(checkpoints, key=lambda x: int(x.split('_')[1].split('.')[0]))
         if len(checkpoints) == 0 or not load_checkpoint:
             print('No checkpoints found, starting from scratch')
             return 
@@ -191,13 +325,19 @@ class BaseTrainer:
         
 
     def train_epoch(self, train_loader): # one epoch
-        '''
-        Performs one epoch of training
-        Args:
-            train_loader: the training data loader
-        Returns:
-            train_loss: the average training loss for the epoch
-        '''
+        """
+        Performs one epoch of training.
+        
+        Parameters
+        ----------
+        train_loader : torch.utils.data.DataLoader
+            The training data loader.
+
+        Returns
+        -------
+        train_loss : float
+            The average training loss for the epoch.
+        """
         self.model.train()
         train_loss = 0
         for idx, batch in enumerate(train_loader):
@@ -212,15 +352,26 @@ class BaseTrainer:
               val_loader, 
               epochs, 
               load_checkpoint: Union[bool, int] = True):
-        '''
-        Training
-        Args:
-            train_loader: the training data loader
-            val_loader: the validation data loader
-            epochs: number of epochs to train for
-            load_checkpoint: if true, load latest checkpoint and continue training, if int, 
-                            load checkpoint from that epoch and continue training
-        '''
+        """
+        Performs the full training routine.
+        
+        Parameters
+        ----------
+        train_loader : torch.utils.data.DataLoader
+            The training data loader.
+        val_loader : torch.utils.data.DataLoader
+            The validation data loader.
+            epochs : int
+            The number of epochs to train for.
+        load_checkpoint : bool, optional
+            If True, loads the latest checkpoint from the output directory and
+            continues training. If an integer is provided, loads the checkpoint
+            from that epoch and continues training.
+            
+        Returns
+        -------
+        None
+        """
         print('Training')
         # if load checkpoint is true, then load latest model and continue training
         start_epoch = 0
@@ -243,13 +394,29 @@ class BaseTrainer:
         return
     
     def train_step(self, batch, idx = 0):
+        """
+        Performs a single training step.
+        
+        Parameters
+        ----------
+        batch : tuple
+            A tuple containing the batch of data and labels, as returned by the
+            data loader.
+        idx : int
+            The index of the batch.
+            
+        Returns
+        -------
+        loss : float
+            The loss for the batch.
+        """
         self.model.train()
         data, target = batch
         with torch.autocast(device_type='cuda', dtype=torch.float16):
             output = self.model(data.to(self.device), length = target.shape[-1], 
                                 activation = self.config.params.activation) 
-            if self.config.task == 'chromatin_accessibility' or self.config.task == 'histone_modification':
-                output = output.squeeze(1)
+            #if self.config.task == 'chromatin_accessibility' or self.config.task == 'histone_modification':
+            #    output = output.squeeze(1)
             loss = self.criterion(output, target.to(self.device).long())
             loss = loss / self.gradient_accumulation_steps
         # Accumulates scaled gradients.
@@ -261,16 +428,22 @@ class BaseTrainer:
             
         return loss.item()
 
-    def validate(self, data_loader, save_output = False):
-        '''
-        Validation
-        Args:
-            data_loader: the data loader to be used
-            save_output: if true, save the targets and outputs to a torch file
-        Returns:
-            loss: the average validation loss
-            metric: the average validation metric
-        '''
+    def validate(self, data_loader):
+        """
+        Performs validation.
+
+        Parameters
+        ----------
+        data_loader : torch.utils.data.DataLoader
+            The data loader to be used.
+
+        Returns
+        -------
+        loss : float
+            The average validation loss.
+        metric : float
+            The average validation metric.
+        """
         self.model.eval()
         loss = 0
         outputs = []
@@ -278,8 +451,7 @@ class BaseTrainer:
         with torch.no_grad():
             for idx, (data, target) in enumerate(data_loader):
                 output = self.model(data.to(self.device), activation = self.config.params.activation)
-                if self.config.task == 'chromatin_accessibility' or self.config.task == 'histone_modification':
-                    output = output.squeeze(1)
+                if  self.config.params.criterion == 'bce': #self.config.task in ['chromatin_accessibility', 'histone_modification', 'enhancer_annotation']:
                     outputs.append(self.model.sigmoid(output).detach().cpu())
                 else: 
                     outputs.append(torch.argmax(self.model.softmax(output), dim=-1).detach().cpu()) 
@@ -287,8 +459,6 @@ class BaseTrainer:
                 targets_all.append(target.detach().cpu())  
 
         loss /= (idx + 1) 
-        if save_output:
-            torch.save({'targets': targets_all, 'outputs': outputs}, f'{self.config.output_dir}/test_set.torch')
         # compute metrics
         metric = self._calculate_metric(torch.cat(targets_all), 
                                           torch.cat(outputs))
@@ -296,43 +466,50 @@ class BaseTrainer:
         return loss, metric
 
     def test(self, test_loader, checkpoint = None, overwrite=False):
-        '''
-        Testing
-        Args:
-            test_loader: the test data loader
-            checkpoint: if None, load model with lowest validation loss, else load checkpoint
-            overwrite: if true, overwrite the metrics file
-        Returns:
-            loss: the average test loss
-            metric: the average test metric
-        '''
-        # get model with lowest validation loss
+        """
+        Performs testing.
+
+        Parameters
+        ----------
+        test_loader : torch.utils.data.DataLoader
+            The data loader to be used.
+        checkpoint : pandas.DataFrame, optional
+            The checkpoint to be used. If None, loads the checkpoint with the
+            lowest validation loss.
+        overwrite : bool, optional
+            If True, overwrites the `best_model_metrics` file.
+
+        Returns
+        -------
+        loss : float
+            The average validation loss.
+        metric : float
+            The average validation metric.
+        """
         df = pd.read_csv(f'{self.config.output_dir}/losses.csv')
         if checkpoint is None:
-            checkpoint = pd.DataFrame(df.iloc[df["val_loss"].idxmin()]).T.reset_index(drop=True) 
+            checkpoint = pd.DataFrame(df.iloc[df[f"val_{self.config.params.metric}"].idxmax()]).T.reset_index(drop=True) 
         # load checkpoint
         print(f'{self.config.output_dir}/checkpoints/epoch_{int(checkpoint["Epoch"].iloc[0])}.pt')
         epoch, train_loss, val_loss, val_metric = self._load_checkpoint(f'{self.config.output_dir}/checkpoints/epoch_{int(checkpoint["Epoch"].iloc[0])}.pt')
         print(f'Loaded checkpoint from epoch {epoch}, train loss: {train_loss:.3f}, val loss: {val_loss:.3f}, Val {self.config.params.metric}: {np.mean(val_metric):.3f}')
 
         # test
-        loss, metric = self.validate(test_loader, save_output = False)
-        # also save test metrics just in case 
-        f = open(f'{self.config.output_dir}/test_metrics_checkpoint{epoch}.txt', "a")
-        f.write(f'Epoch: {epoch} \nloss: {loss} \nmetric : {metric}\n')
-        f.close()
-        print(f'Test results : Loss {loss:.4f}, {self.config.params.metric} {metric.mean():.4f}')
+        loss, metric = self.validate(test_loader)
+        
+        print(f'Test results : Loss {loss:.4f}, {self.config.params.metric} {np.mean(metric):.4f}')
+        
         if isinstance(metric, np.ndarray):
-            columns = ['test_loss', 'test_metric_avg'] +[f'test_{self.config.params.metric}_{n}' for n in range(len(metric))]
+            columns = ['test_loss', f'test_{self.config.params.metric}_avg'] +[f'test_{self.config.params.metric}_{n}' for n in range(len(metric))]
             data = [[loss, np.mean(metric)] + list(metric)]
         else:
-            data = [[loss, metric]]
             columns = ['test_loss', f'test_{self.config.params.metric}']
-        new_metrics = pd.DataFrame(data = data, columns = columns)
-        metrics = checkpoint.merge(new_metrics, how = 'cross')
+            data = [[loss, metric]]
+            
+        metrics = checkpoint.merge(pd.DataFrame(data = data, columns = columns), how = 'cross')
 
         if not overwrite and os.path.exists(f'{self.config.output_dir}/best_model_metrics.csv'):
-            best_model_metrics = pd.read_csv(f'{self.config.output_dir}/best_model_metrics.csv') 
+            best_model_metrics = pd.read_csv(f'{self.config.output_dir}/best_model_metrics.csv', index_col = False) 
             # concat metrics to best model metrics
             metrics = pd.concat([best_model_metrics, metrics], ignore_index=True)
 

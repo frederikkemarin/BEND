@@ -1,4 +1,5 @@
 onehot: 5
+resnet-supervised : 256
 gpn: 512
 nt_transformer_2B5_1000G: 2560
 nt_transformer_ms: 2560
@@ -13,3 +14,6 @@ gena-lm-bigbird-base-t2t : 768
 gena-lm-bert-large-t2 : 1024
 hyenadna-large-1m : 256
 hyenadna-tiny-1k : 128
+hyenadna-small-32k : 256
+hyenadna-medium-160k : 256
+hyenadna-medium-450k : 256
