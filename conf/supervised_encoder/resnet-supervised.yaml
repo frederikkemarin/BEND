@@ -1,0 +1,8 @@
+resnet-supervised:
+  _target_: bend.models.downstream.ConvNetForSupervised
+  n_layers: 30
+  vocab_size : 5
+  hidden_size: 256
+
+
+  
