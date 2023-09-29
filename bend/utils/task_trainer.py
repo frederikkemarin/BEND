@@ -415,8 +415,7 @@ class BaseTrainer:
         with torch.autocast(device_type='cuda', dtype=torch.float16):
             output = self.model(data.to(self.device), length = target.shape[-1], 
                                 activation = self.config.params.activation) 
-            #if self.config.task == 'chromatin_accessibility' or self.config.task == 'histone_modification':
-            #    output = output.squeeze(1)
+            
             loss = self.criterion(output, target.to(self.device).long())
             loss = loss / self.gradient_accumulation_steps
         # Accumulates scaled gradients.
@@ -425,7 +424,7 @@ class BaseTrainer:
             self.scaler.step(self.optimizer)
             self.scaler.update()
             self.optimizer.zero_grad(set_to_none = True)
-            
+        
         return loss.item()
 
     def validate(self, data_loader):
