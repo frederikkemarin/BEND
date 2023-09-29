@@ -36,7 +36,9 @@ def run_experiment(cfg: DictConfig) -> None:
 
         # embed in chunks 
         # get length of bed file and divide by chunk size, if a spcific chunk is not set 
-        possible_chunks = list(range(int(len(pd.read_csv(cfg[cfg.task].bed, sep = '\t')) /cfg.chunk_size)+1))
+        df = pd.read_csv(cfg[cfg.task].bed, sep = '\t')
+        df = df[df.iloc[:, -1] == split] if split is not None else df
+        possible_chunks = list(range(int(len(df) /cfg.chunk_size)+1))
         if cfg.chunk is None: 
             cfg.chunk = possible_chunks
         else:
