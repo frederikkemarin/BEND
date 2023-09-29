@@ -19,6 +19,8 @@ def run_experiment(cfg: DictConfig) -> None:
     cfg : DictConfig
         Hydra configuration object.
     """
+    if torch.cuda.device_count() > 1:
+            print("Let's use", torch.cuda.device_count(), "GPUs!")
     print('Embedding data for', cfg.task)
     # read the bed file and get the splits :  
     if not 'splits' in cfg or cfg.splits is None:
