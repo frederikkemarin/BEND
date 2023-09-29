@@ -12,18 +12,18 @@ hydra :
       embedder : gena-lm-bigbird-base-t2t,
                  gena-lm-bert-large-t2,
                  hyenadna-tiny-1k,
-                 hyenadna-small-32k,
-                 hyenadna-medium-160k,
-                 hyenadna-medium-450k,
                  hyenadna-large-1m,
+                 dnabert2,
                  dnabert6,
                  resnetlm,
                  nt_transformer_ms,
                  nt_transformer_human_ref,
                  nt_transformer_1000g,
-                 dnabert2,
                  onehot,
                  awdlstm
+                 #hyenadna-small-32k,
+                 #hyenadna-medium-160k,
+                 #hyenadna-medium-450k,
                  #resnet-supervised
 embedder : onehot
 task : histone_modification 
@@ -60,6 +60,7 @@ params:
   class_weights: null
   metric : auroc
   activation : none
+  parallel : true
 wandb:
   mode : disabled 
 

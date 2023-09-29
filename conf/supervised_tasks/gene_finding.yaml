@@ -9,6 +9,7 @@ hydra :
     - file://conf 
   sweeper:
     params:
+      params.run : range(1,4)
       embedder : gena-lm-bigbird-base-t2t,
                  gena-lm-bert-large-t2,
                  hyenadna-tiny-1k,
@@ -27,7 +28,7 @@ hydra :
                  resnet-supervised
 task : gene_finding 
 embedder : onehot
-output_dir: ./downstream_tasks/${task}/${embedder}/
+output_dir: ./downstream_tasks/${task}/${embedder}_run${params.run}/
 model:
   _target_: bend.models.downstream.CNN
   input_size: ${datadims.${embedder}}
@@ -59,5 +60,6 @@ params:
   class_weights: null
   metric : mcc
   activation : none
+  run : 1
 wandb:
   mode : disabled 

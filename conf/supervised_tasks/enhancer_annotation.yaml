@@ -13,9 +13,6 @@ hydra :
       embedder : gena-lm-bigbird-base-t2t,
                  gena-lm-bert-large-t2,
                  hyenadna-tiny-1k,
-                 hyenadna-small-32k,
-                 hyenadna-medium-160k,
-                 hyenadna-medium-450k,
                  hyenadna-large-1m,
                  dnabert6,
                  resnetlm,
@@ -25,6 +22,9 @@ hydra :
                  dnabert2,
                  onehot,
                  awdlstm,
+                 hyenadna-small-32k,
+                 hyenadna-medium-160k,
+                 hyenadna-medium-450k,
                  resnet-supervised
 embedder : onehot
 task : enhancer_annotation 
@@ -45,7 +45,7 @@ data:
   batch_size : 8
   num_workers : 0
   padding_value : -100
-  shuffle : 100
+  shuffle : 20
   parent_dir: ./data/
   data_dir : ${data.parent_dir}/${task}/${embedder}/
   cross_validation : 1 # which split to run in the cross validation
@@ -59,5 +59,6 @@ params:
     - 82.86
   metric : auprc
   activation : none
+  parallel : false # whether to use multiple gpus in parallel
 wandb:
   mode : disabled 
