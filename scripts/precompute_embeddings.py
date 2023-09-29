@@ -33,12 +33,21 @@ def run_experiment(cfg: DictConfig) -> None:
         output_dir = f'{cfg.data_dir}/{cfg.task}/{cfg.model}/'
         
         os.makedirs(output_dir, exist_ok=True)
-        gen = sequtils.embed_from_bed(**cfg[cfg.task], embedder = embedder, split = split, 
+
+        # embed in chunks 
+        # get length of bed file and divide by chunk size, if a spcific chunk is not set 
+        if cfg.chunk is None: 
+            cfg.chunk = list(range(int(len(pd.read_csv(cfg[cfg.task].bed, sep = '\t')) /cfg.chunk_size)))
+            
+        # embed in chunks
+        for chunk in cfg.chunk: 
+            print(f'Embedding chunk {chunk}')
+            gen = sequtils.embed_from_bed(**cfg[cfg.task], embedder = embedder, split = split, chunk = chunk, chunk_size = cfg.chunk_size,   
                                         upsample_embeddings = cfg[cfg.model]['upsample_embeddings'] if 'upsample_embeddings' in cfg[cfg.model] else False)
-        # save the embeddings to tfrecords 
-        dataset = dataset_from_iterable(gen)
-        dataset.element_spec
-        dataset_to_tfrecord(dataset, f'{output_dir}/{split}.tfrecord')
+            # save the embeddings to tfrecords 
+            dataset = dataset_from_iterable(gen)
+            dataset.element_spec
+            dataset_to_tfrecord(dataset, f'{output_dir}/{split}_{chunk}.tfrecord')
         
 
 
