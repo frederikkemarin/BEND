@@ -42,12 +42,16 @@ def run_experiment(cfg: DictConfig) -> None:
         if cfg.chunk is None: 
             cfg.chunk = possible_chunks
         else:
+            chunks_ok = []
             for chunk in cfg.chunk:
-                if chunk not in possible_chunks:
-                    raise ValueError(f'Requested chunk {chunk}, but chunk ids range from {min(possible_chunks)}-{max(possible_chunks)}')
+                if chunk in possible_chunks:
+                    chunks_ok.append(chunk)
+                else:
+                    print(f'Skipping impossible chunk {chunk}')
+                    # raise ValueError(f'Requested chunk {chunk}, but chunk ids range from {min(possible_chunks)}-{max(possible_chunks)}')
             
         # embed in chunks
-        for chunk in cfg.chunk: 
+        for chunk in chunks_ok: 
             print(f'Embedding chunk {chunk}/{len(possible_chunks)}')
             gen = sequtils.embed_from_bed(**cfg[cfg.task], embedder = embedder, split = split, chunk = chunk, chunk_size = cfg.chunk_size,   
                                         upsample_embeddings = cfg[cfg.model]['upsample_embeddings'] if 'upsample_embeddings' in cfg[cfg.model] else False)
