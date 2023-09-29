@@ -175,7 +175,7 @@ class Basset(nn.Module):
         Returns
         -------
         torch.Tensor
-            Output tensor. Has shape (batch_size, output_length, output_size).
+            Output tensor. Has shape (batch_size, output_size).
             output_length is determined by the input length, the upsampling factor, and the output downsampling window.
 
         """
