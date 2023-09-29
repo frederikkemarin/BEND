@@ -149,7 +149,7 @@ class Basset(nn.Module):
         self.clf = nn.Sequential(
             nn.Flatten(),
             nn.Linear(prev_input_size*out_len, 1000),
-            nn.ReLU,
+            nn.ReLU(),
             nn.Dropout(0.3),
             nn.Linear(1000, 1000),
             nn.Dropout(0.3),
