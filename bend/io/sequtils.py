@@ -140,7 +140,7 @@ def embed_from_bed(bed, reference_fasta, embedder, upsample_embeddings = False,
         f = f[f.iloc[:, -1] == split]
     label_column_idx = f.columns.get_loc('label') if 'label' in f.columns else label_column_idx
     strand_column_idx = f.columns.get_loc('strand') if 'strand' in f.columns else 3
-
+        
     for n, line in tqdm.tqdm(f.iterrows()):
         # get bed row
         if read_strand:
@@ -150,7 +150,8 @@ def embed_from_bed(bed, reference_fasta, embedder, upsample_embeddings = False,
         if hdf5_file is not None: 
             labels = hdf5_file['labels'][n]
         else: 
-            labels = list(map(int, line[label_column_idx].split(',')))
+            labels = line[label_column_idx]
+            labels = list(map(int, labels.split(','))) if isinstance(labels, str) else [] # if no label for sample
             labels = multi_hot(labels, depth=label_depth)
         # get sequence
         sequence = fasta.fetch(chrom, start, end, strand = strand, flank = flank) # categorical labels
