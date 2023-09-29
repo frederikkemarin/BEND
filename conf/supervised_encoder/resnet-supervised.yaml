@@ -1,0 +1,11 @@
+resnet-supervised:
+  _target_: bend.models.downstream.ConvNetForSupervised
+  n_layers: 30
+  vocab_size : 5
+  hidden_size: 256
+<<<<<<< HEAD:conf/misc/resnet_supervised.yaml
+=======
+
+
+  
+>>>>>>> main:conf/supervised_encoder/resnet-supervised.yaml

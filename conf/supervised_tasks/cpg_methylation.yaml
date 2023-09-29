@@ -1,7 +1,7 @@
 defaults:
   - datadims : [label_dims,embedding_dims, downstream_downsample]
   - hydra : multirun 
-  - misc : resnet_supervised
+  - supervised_encoder : [resnet-supervised, basset-supervised]
   - override hydra/launcher: joblib # ability to launch jobs in parallel fashion
   - _self_
 hydra :
@@ -30,6 +30,7 @@ task : cpg_methylation
 output_dir: ./downstream_tasks/${task}/${embedder}/
 model:
   _target_: bend.models.downstream.CNN
+  encoder : null
   input_size: ${datadims.${embedder}}
   output_size: ${datadims.${task}}
   hidden_size: 64

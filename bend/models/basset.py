@@ -149,7 +149,7 @@ class Basset(nn.Module):
         self.clf = nn.Sequential(
             nn.Flatten(),
             nn.Linear(prev_input_size*out_len, 1000),
-            nn.ReLU,
+            nn.ReLU(),
             nn.Dropout(0.3),
             nn.Linear(1000, 1000),
             nn.Dropout(0.3),
@@ -175,7 +175,7 @@ class Basset(nn.Module):
         Returns
         -------
         torch.Tensor
-            Output tensor. Has shape (batch_size, output_length, output_size).
+            Output tensor. Has shape (batch_size, output_size).
             output_length is determined by the input length, the upsampling factor, and the output downsampling window.
 
         """
