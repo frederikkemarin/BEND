@@ -36,12 +36,17 @@ def run_experiment(cfg: DictConfig) -> None:
 
         # embed in chunks 
         # get length of bed file and divide by chunk size, if a spcific chunk is not set 
+        possible_chunks = list(range(int(len(pd.read_csv(cfg[cfg.task].bed, sep = '\t')) /cfg.chunk_size)+1))
         if cfg.chunk is None: 
-            cfg.chunk = list(range(int(len(pd.read_csv(cfg[cfg.task].bed, sep = '\t')) /cfg.chunk_size)))
+            cfg.chunk = possible_chunks
+        else:
+            for chunk in cfg.chunk:
+                if chunk not in possible_chunks:
+                    raise ValueError(f'Requested chunk {chunk}, but chunk ids range from {min(possible_chunks)}-{max(possible_chunks)}')
             
         # embed in chunks
         for chunk in cfg.chunk: 
-            print(f'Embedding chunk {chunk}/len({cfg.chunk})')
+            print(f'Embedding chunk {chunk}/{len(possible_chunks)}')
             gen = sequtils.embed_from_bed(**cfg[cfg.task], embedder = embedder, split = split, chunk = chunk, chunk_size = cfg.chunk_size,   
                                         upsample_embeddings = cfg[cfg.model]['upsample_embeddings'] if 'upsample_embeddings' in cfg[cfg.model] else False)
             # save the embeddings to tfrecords 

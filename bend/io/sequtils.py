@@ -150,7 +150,6 @@ def embed_from_bed(bed, reference_fasta, embedder, hdf5_file= None,
         f = f_chunked[chunk]
 
     for n, line in tqdm.tqdm(f.iterrows()):
-        print(n)
         # get bed row
         if read_strand:
             chrom, start, end, strand = line[0], int(line[1]), int(line[2]), line[strand_column_idx]
