@@ -8,8 +8,8 @@
 
 
 project = 'BEND'
-copyright = '2023, F.I. Marin, F. Teufel, M. Horlacher, D. Pultz, O. Winther, W. Boomsma'
-author = 'F.I. Marin, F. Teufel, M. Horlacher, D. Pultz, O. Winther, W. Boomsma'
+copyright = ''
+author = ''
 release = '0.1.0'
 
 

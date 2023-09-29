@@ -129,26 +129,35 @@ def embed_from_multilabled_bed_gen(bed, reference_fasta, embedder, label_column_
             yield {'inputs': sequence_embed, 'outputs': labels_multi_hot}
 
 
-def embed_from_bed(bed, reference_fasta, embedder, upsample_embeddings = False, 
-                  hdf5_file= None, read_strand = False, label_column_idx=6, label_depth=None, split = None, flank = 0):
+def embed_from_bed(bed, reference_fasta, embedder, hdf5_file= None,
+                   chunk_size = None, chunk: int = None, 
+                   upsample_embeddings = False,
+                    read_strand = False, label_column_idx=6, 
+                  label_depth=None, split = None, flank = 0):
     fasta = Fasta(reference_fasta)
-    # open hdf5 file 
-    hdf5_file = h5py.File(hdf5_file, mode = "r") if hdf5_file else None
     #header = 'infer' if has_header(bed) else None
     f = pd.read_csv(bed, header = 'infer', sep = '\t')
     if split: 
         f = f[f.iloc[:, -1] == split]
     label_column_idx = f.columns.get_loc('label') if 'label' in f.columns else label_column_idx
     strand_column_idx = f.columns.get_loc('strand') if 'strand' in f.columns else 3
+    # open hdf5 file 
+    hdf5_file = h5py.File(hdf5_file, mode = "r") if hdf5_file else None
+    if chunk is not None:
+        # chunk f into chunk_size chunks
+        f_chunked = [f[i:i+chunk_size] for i in range(0, f.shape[0], chunk_size)]
+        # get only the desired chunk 
+        f = f_chunked[chunk]
 
     for n, line in tqdm.tqdm(f.iterrows()):
+        print(n)
         # get bed row
         if read_strand:
             chrom, start, end, strand = line[0], int(line[1]), int(line[2]), line[strand_column_idx]
         else:
             chrom, start, end, strand = line[0], int(line[1]), int(line[2]), '+' 
         if hdf5_file is not None: 
-            labels = hdf5_file['labels'][n]
+            labels = hdf5_file['labels'][n + (chunk*chunk_size)]
         else: 
             labels = list(map(int, line[label_column_idx].split(',')))
             labels = multi_hot(labels, depth=label_depth)
