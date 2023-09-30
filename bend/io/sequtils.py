@@ -152,13 +152,13 @@ def embed_from_bed(bed, reference_fasta, embedder, hdf5_file= None,
     for n, line in tqdm.tqdm(f.iterrows()):
         # get bed row
         if read_strand:
-            chrom, start, end, strand = line[0], int(line[1]), int(line[2]), line[strand_column_idx]
+            chrom, start, end, strand = line[0], int(line[1]), int(line[2]), line.iloc[strand_column_idx]
         else:
             chrom, start, end, strand = line[0], int(line[1]), int(line[2]), '+' 
         if hdf5_file is not None: 
             labels = hdf5_file['labels'][n + (chunk*chunk_size)]
         else: 
-            labels = line[label_column_idx]
+            labels = line.iloc[label_column_idx]
             labels = list(map(int, labels.split(','))) if isinstance(labels, str) else [] # if no label for sample
             labels = multi_hot(labels, depth=label_depth)
         # get sequence
