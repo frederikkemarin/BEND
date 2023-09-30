@@ -946,6 +946,7 @@ class OneHotEmbedder(BaseEmbedder):
         embeddings = []
         for s in tqdm(sequences, disable=disable_tqdm):
             s = self._transform_integer(s, return_onehot = return_onehot)
+            s = s[None,:] # dummy batch dim, as customary for embeddings
             embeddings.append(s)
         return embeddings
     
