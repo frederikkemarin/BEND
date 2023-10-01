@@ -714,7 +714,10 @@ class HyenaDNAEmbedder(BaseEmbedder):
         # NOTE the git lfs download command will add this,
         # but we actually dont use LFS for BEND itself.
         if not is_git_lfs_repo:
-            os.remove('.git/hooks/pre-push')
+            try:
+                os.remove('.git/hooks/pre-push')
+            except FileNotFoundError:
+                pass
 
 
 
