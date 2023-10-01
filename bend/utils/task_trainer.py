@@ -304,11 +304,14 @@ class BaseTrainer:
         Returns:
             checkpoint_path: the path of the checkpoint to load
         '''
+        if not load_checkpoint:
+            print("Not looking for existing checkpoints, starting from scratch.")
+            return
 
         checkpoints = [f for f in os.listdir(f'{self.config.output_dir}/checkpoints/') if f.endswith('.pt')]
         checkpoints = sorted(checkpoints, key=lambda x: int(x.split('_')[1].split('.')[0]))
-        if len(checkpoints) == 0 or not load_checkpoint:
-            print('No checkpoints found, starting from scratch')
+        if len(checkpoints) == 0:
+            print('No checkpoints found, starting from scratch.')
             return 
         else:
             if isinstance(load_checkpoint, bool):
@@ -338,9 +341,10 @@ class BaseTrainer:
         train_loss : float
             The average training loss for the epoch.
         """
+        from tqdm.auto import tqdm
         self.model.train()
         train_loss = 0
-        for idx, batch in enumerate(train_loader):
+        for idx, batch in tqdm(enumerate(train_loader)):
             train_loss += self.train_step(batch, idx = idx)
         train_loss /= (idx +1)
         return train_loss
