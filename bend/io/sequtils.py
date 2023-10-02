@@ -9,6 +9,7 @@ import pysam
 from bioio.tf.utils import multi_hot
 import pandas as pd
 import h5py
+import numpy as np
 
 # %%
 baseComplement = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A'}
@@ -144,8 +145,11 @@ def embed_from_bed(bed, reference_fasta, embedder, hdf5_file= None,
     # open hdf5 file 
     hdf5_file = h5py.File(hdf5_file, mode = "r") if hdf5_file else None
     if chunk is not None:
+        # check if chunk is valid 
+        if chunk * chunk_size > len(f):
+            raise ValueError(f'Requested chunk {chunk}, but chunk ids range from 0-{int(len(f) / chunk_size)}')
         f = f[chunk*chunk_size:(chunk+1)*chunk_size]
-
+    inputs_list, labels_list = [], []
     for n, line in tqdm.tqdm(f.iterrows(), total=len(f), desc='Embedding sequences'):
         # get bed row
         if read_strand:
@@ -166,8 +170,12 @@ def embed_from_bed(bed, reference_fasta, embedder, hdf5_file= None,
             print(f'Embedding length does not match sequence length ({sequence_embed.shape[1]} != {len(sequence)} : {n} {chrom}:{start}-{end}{strand})')
             print(n, chrom, start, end, strand)
             continue
-        sequence_embed = tf.squeeze(tf.constant(sequence_embed))
-        yield {'inputs': sequence_embed, 'outputs': labels}
+        inputs_list.append(sequence_embed)
+        labels_list.append(labels)
+    return {'inputs': np.concatenate(inputs_list), 'labels': np.stack(labels_list)}
+        #yield sequence_embed, sequence_embed 
+        #yield 'inputs', sequence_embed
+        #yield 'labels', sequence_embed
 
 
 def get_splits(bed):

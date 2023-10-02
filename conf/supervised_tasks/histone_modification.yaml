@@ -1,5 +1,5 @@
 defaults:
-  - datadims : [label_dims,embedding_dims, downstream_downsample]
+  - datadims : [label_dims,embedding_dims,downstream_downsample]
   - hydra : multirun 
   - supervised_encoder : [resnet-supervised, basset-supervised]
   - override hydra/launcher: joblib # ability to launch jobs in parallel fashion

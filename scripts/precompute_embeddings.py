@@ -4,6 +4,8 @@ import torch
 import os
 import bend.io.sequtils as sequtils
 import pandas as pd
+import numpy as np
+import h5py
 from bioio.tf import dataset_from_iterable
 #from bioio.tf import dataset_to_tfrecord
 from bend.io.datasets import dataset_to_tfrecord
@@ -39,9 +41,27 @@ def run_experiment(cfg: DictConfig) -> None:
         df = pd.read_csv(cfg[cfg.task].bed, sep = '\t')
         df = df[df.iloc[:, -1] == split] if split is not None else df
         possible_chunks = list(range(int(len(df) /cfg.chunk_size)+1))
+
+        # create hdf5 file to write too
+         # create hdf5 file to write too
+        ds = h5py.File(f'{output_dir}/{split}.hdf5', 'w')
+        dims = (len(df), 
+                cfg.datadims[f'{cfg.task}_length'], 
+                 cfg.datadims[cfg.model] ) if cfg.model != 'onehot' else (len(df), 
+                                                                          cfg.datadims[f'{cfg.task}_length'] )
+        ds.create_dataset('inputs', (dims), 
+                          compression="gzip",
+                          dtype='float64')
+        
+        dims = (len(df), cfg.datadims[f'{cfg.task}_length']) if cfg.datadims.output_downsample_window[cfg.task] is None else (len(df), cfg.datadims[f'{cfg.task}'])
+        ds.create_dataset('labels', (dims), 
+                          compression="gzip",
+                          dtype='float64')
+
+
         if cfg.chunk is None: 
             cfg.chunk = possible_chunks
-        else:
+        '''
             chunks_ok = []
             for chunk in cfg.chunk:
                 if chunk in possible_chunks:
@@ -49,19 +69,18 @@ def run_experiment(cfg: DictConfig) -> None:
                 else:
                     print(f'Skipping impossible chunk {chunk}')
                     # raise ValueError(f'Requested chunk {chunk}, but chunk ids range from {min(possible_chunks)}-{max(possible_chunks)}')
-            
+        '''
         # embed in chunks
-        for chunk in chunks_ok: 
-            print(f'Embedding chunk {chunk}/{len(possible_chunks)}')
-            gen = sequtils.embed_from_bed(**cfg[cfg.task], embedder = embedder, split = split, chunk = chunk, chunk_size = cfg.chunk_size,   
+        for n, chunk in enumerate(cfg.chunk): # chunks_ok: 
+            print(f'Embedding chunk {n+1}/{len(cfg.chunk)}')
+            d = sequtils.embed_from_bed(**cfg[cfg.task], embedder = embedder, split = split, chunk = chunk, chunk_size = cfg.chunk_size,   
                                         upsample_embeddings = cfg[cfg.model]['upsample_embeddings'] if 'upsample_embeddings' in cfg[cfg.model] else False)
-            # save the embeddings to tfrecords 
-            dataset = dataset_from_iterable(gen)
-            dataset.element_spec
-            dataset_to_tfrecord(dataset, f'{output_dir}/{split}_{chunk}.tfrecord')
+            
+            
+            ds['inputs'][chunk * cfg.chunk_size : (chunk+1) * cfg.chunk_size] = d['inputs']
+            ds['labels'][chunk * cfg.chunk_size : (chunk+1) * cfg.chunk_size] = d['labels']
         
-
-
+        ds.close()
 
 if __name__ == '__main__':
     
