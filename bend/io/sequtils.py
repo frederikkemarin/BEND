@@ -130,26 +130,29 @@ def embed_from_multilabled_bed_gen(bed, reference_fasta, embedder, label_column_
             yield {'inputs': sequence_embed, 'outputs': labels_multi_hot}
 
 
-def embed_from_bed(bed, reference_fasta, embedder, hdf5_file= None,
+def embed_from_bed(bed, reference_fasta, embedder, 
+                    output_path,
+                   hdf5_file= None,
                    chunk_size = None, chunk: int = None, 
                    upsample_embeddings = False,
                     read_strand = False, label_column_idx=6, 
                   label_depth=None, split = None, flank = 0):
     fasta = Fasta(reference_fasta)
-    #header = 'infer' if has_header(bed) else None
-    f = pd.read_csv(bed, header = 'infer', sep = '\t')
+    f = pd.read_csv(bed, header = 'infer', sep = '\t', low_memory=False)
     if split: 
         f = f[f.iloc[:, -1] == split]
     label_column_idx = f.columns.get_loc('label') if 'label' in f.columns else label_column_idx
     strand_column_idx = f.columns.get_loc('strand') if 'strand' in f.columns else 3
     # open hdf5 file 
     hdf5_file = h5py.File(hdf5_file, mode = "r") if hdf5_file else None
+    
     if chunk is not None:
         # check if chunk is valid 
         if chunk * chunk_size > len(f):
             raise ValueError(f'Requested chunk {chunk}, but chunk ids range from 0-{int(len(f) / chunk_size)}')
-        f = f[chunk*chunk_size:(chunk+1)*chunk_size]
-    inputs_list, labels_list = [], []
+        f = f[chunk*chunk_size:(chunk+1)*chunk_size].reset_index(drop=True)
+
+    ds = h5py.File(output_path, mode='a')
     for n, line in tqdm.tqdm(f.iterrows(), total=len(f), desc='Embedding sequences'):
         # get bed row
         if read_strand:
@@ -170,12 +173,10 @@ def embed_from_bed(bed, reference_fasta, embedder, hdf5_file= None,
             print(f'Embedding length does not match sequence length ({sequence_embed.shape[1]} != {len(sequence)} : {n} {chrom}:{start}-{end}{strand})')
             print(n, chrom, start, end, strand)
             continue
-        inputs_list.append(sequence_embed)
-        labels_list.append(labels)
-    return {'inputs': np.concatenate(inputs_list), 'labels': np.stack(labels_list)}
-        #yield sequence_embed, sequence_embed 
-        #yield 'inputs', sequence_embed
-        #yield 'labels', sequence_embed
+        ds['inputs'][n + (chunk*chunk_size)] = sequence_embed
+        ds['labels'][n + (chunk*chunk_size)] = labels
+    ds.close()
+
 
 
 def get_splits(bed):
