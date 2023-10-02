@@ -130,6 +130,8 @@ def embed_from_multilabled_bed_gen(bed, reference_fasta, embedder, label_column_
             yield {'inputs': sequence_embed, 'outputs': labels_multi_hot}
 
 
+
+
 def embed_from_bed(bed, reference_fasta, embedder, 
                     output_path,
                    hdf5_file= None,
@@ -151,7 +153,8 @@ def embed_from_bed(bed, reference_fasta, embedder,
         if chunk * chunk_size > len(f):
             raise ValueError(f'Requested chunk {chunk}, but chunk ids range from 0-{int(len(f) / chunk_size)}')
         f = f[chunk*chunk_size:(chunk+1)*chunk_size].reset_index(drop=True)
-
+    inputs = []
+    outputs = []
     ds = h5py.File(output_path, mode='a')
     for n, line in tqdm.tqdm(f.iterrows(), total=len(f), desc='Embedding sequences'):
         # get bed row
@@ -173,8 +176,12 @@ def embed_from_bed(bed, reference_fasta, embedder,
             print(f'Embedding length does not match sequence length ({sequence_embed.shape[1]} != {len(sequence)} : {n} {chrom}:{start}-{end}{strand})')
             print(n, chrom, start, end, strand)
             continue
-        ds['inputs'][n + (chunk*chunk_size)] = sequence_embed
-        ds['labels'][n + (chunk*chunk_size)] = labels
+        #ds['inputs'][n + (chunk*chunk_size)] = sequence_embed
+        #ds['labels'][n + (chunk*chunk_size)] = labels
+        inputs.append(sequence_embed)
+        outputs.append(labels)
+    ds['inputs'][(chunk*chunk_size) : ((chunk+1)*chunk_size)] = np.concatenate(inputs)
+    ds['labels'][(chunk*chunk_size) : ((chunk+1)*chunk_size)] = np.stack(outputs)
     ds.close()
 
 

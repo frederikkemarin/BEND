@@ -45,8 +45,10 @@ def run_experiment(cfg: DictConfig) -> None:
             cfg.chunk = possible_chunks
         # embed in chunks
         for n, chunk in enumerate(cfg.chunk): 
+            print(f'Embedding chunk {chunk}/{len(possible_chunks)}')
             if os.path.exists(f'{output_dir}/{split}_{chunk}.hdf5'):
-                return
+                print(f'{split}_{chunk} is already embedded')
+                continue
             # create hdf5 file to write too
             ds = h5py.File(f'{output_dir}/{split}_{chunk}.hdf5', 'w')
             dims = (len(df), 
@@ -63,7 +65,7 @@ def run_experiment(cfg: DictConfig) -> None:
                             dtype='float64')
             ds.close()
 
-            print(f'Embedding chunk {chunk}/{len(possible_chunks)}')
+            
             sequtils.embed_from_bed(**cfg[cfg.task], embedder = embedder, 
                                         output_path = f'{output_dir}/{split}_{chunk}.hdf5',
                                         split = split, chunk = chunk, chunk_size = cfg.chunk_size,   
