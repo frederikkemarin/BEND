@@ -144,10 +144,7 @@ def embed_from_bed(bed, reference_fasta, embedder, hdf5_file= None,
     # open hdf5 file 
     hdf5_file = h5py.File(hdf5_file, mode = "r") if hdf5_file else None
     if chunk is not None:
-        # chunk f into chunk_size chunks
-        f_chunked = [f[i:i+chunk_size] for i in range(0, f.shape[0], chunk_size)]
-        # get only the desired chunk 
-        f = f_chunked[chunk]
+        f = f[chunk*chunk_size:(chunk+1)*chunk_size]
 
     for n, line in tqdm.tqdm(f.iterrows(), total=len(f), desc='Embedding sequences'):
         # get bed row
