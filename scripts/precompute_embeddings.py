@@ -38,49 +38,39 @@ def run_experiment(cfg: DictConfig) -> None:
 
         # embed in chunks 
         # get length of bed file and divide by chunk size, if a spcific chunk is not set 
-        df = pd.read_csv(cfg[cfg.task].bed, sep = '\t')
+        df = pd.read_csv(cfg[cfg.task].bed, sep = '\t', low_memory=False)
         df = df[df.iloc[:, -1] == split] if split is not None else df
-        possible_chunks = list(range(int(len(df) /cfg.chunk_size)+1))
-
-        # create hdf5 file to write too
-         # create hdf5 file to write too
-        ds = h5py.File(f'{output_dir}/{split}.hdf5', 'w')
-        dims = (len(df), 
-                cfg.datadims[f'{cfg.task}_length'], 
-                 cfg.datadims[cfg.model] ) if cfg.model != 'onehot' else (len(df), 
-                                                                          cfg.datadims[f'{cfg.task}_length'] )
-        ds.create_dataset('inputs', (dims), 
-                          compression="gzip",
-                          dtype='float64')
-        
-        dims = (len(df), cfg.datadims[f'{cfg.task}_length']) if cfg.datadims.output_downsample_window[cfg.task] is None else (len(df), cfg.datadims[f'{cfg.task}'])
-        ds.create_dataset('labels', (dims), 
-                          compression="gzip",
-                          dtype='float64')
-
-
+        possible_chunks = list(range(int(len(df) /cfg.chunk_size)+1))         
         if cfg.chunk is None: 
             cfg.chunk = possible_chunks
-        '''
-            chunks_ok = []
-            for chunk in cfg.chunk:
-                if chunk in possible_chunks:
-                    chunks_ok.append(chunk)
-                else:
-                    print(f'Skipping impossible chunk {chunk}')
-                    # raise ValueError(f'Requested chunk {chunk}, but chunk ids range from {min(possible_chunks)}-{max(possible_chunks)}')
-        '''
         # embed in chunks
-        for n, chunk in enumerate(cfg.chunk): # chunks_ok: 
-            print(f'Embedding chunk {n+1}/{len(cfg.chunk)}')
-            d = sequtils.embed_from_bed(**cfg[cfg.task], embedder = embedder, split = split, chunk = chunk, chunk_size = cfg.chunk_size,   
+        for n, chunk in enumerate(cfg.chunk): 
+            if os.path.exists(f'{output_dir}/{split}_{chunk}.hdf5'):
+                return
+            # create hdf5 file to write too
+            ds = h5py.File(f'{output_dir}/{split}_{chunk}.hdf5', 'w')
+            dims = (len(df), 
+                    cfg.datadims[f'{cfg.task}_length'], 
+                    cfg.datadims[cfg.model] ) if cfg.model != 'onehot' else (len(df), 
+                                                                            cfg.datadims[f'{cfg.task}_length'] )
+            ds.create_dataset('inputs', (dims), 
+                            compression="gzip",
+                            dtype='float64')
+            
+            dims = (len(df), cfg.datadims[f'{cfg.task}_length']) if cfg.datadims.output_downsample_window[cfg.task] is None else (len(df), cfg.datadims[f'{cfg.task}'])
+            ds.create_dataset('labels', (dims), 
+                            compression="gzip",
+                            dtype='float64')
+            ds.close()
+
+            print(f'Embedding chunk {chunk}/{len(possible_chunks)}')
+            sequtils.embed_from_bed(**cfg[cfg.task], embedder = embedder, 
+                                        output_path = f'{output_dir}/{split}_{chunk}.hdf5',
+                                        split = split, chunk = chunk, chunk_size = cfg.chunk_size,   
                                         upsample_embeddings = cfg[cfg.model]['upsample_embeddings'] if 'upsample_embeddings' in cfg[cfg.model] else False)
             
             
-            ds['inputs'][chunk * cfg.chunk_size : (chunk+1) * cfg.chunk_size] = d['inputs']
-            ds['labels'][chunk * cfg.chunk_size : (chunk+1) * cfg.chunk_size] = d['labels']
         
-        ds.close()
 
 if __name__ == '__main__':
     
