@@ -25,7 +25,7 @@ def load_tfrecord(tfrecords, features_file=None, deserialize=True, shuffle=None,
         tfrecords = [tfrecords]
     dataset = tf.data.Dataset.from_tensor_slices(tfrecords)
     #try:
-    dataset = dataset.interleave(lambda fp: tf.data.TFRecordDataset(fp, compression_type=compression_type), cycle_length=1, block_length=1, num_parallel_calls=tf.data.AUTOTUNE)
+    dataset = dataset.interleave(lambda fp: tf.data.TFRecordDataset(fp, compression_type=compression_type), cycle_length=None, block_length=1, num_parallel_calls=tf.data.AUTOTUNE)
     #except: 
     #    dataset = dataset.interleave(lambda fp: tf.data.TFRecordDataset(fp), cycle_length=1, block_length=1, num_parallel_calls=tf.data.AUTOTUNE)
     

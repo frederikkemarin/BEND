@@ -714,7 +714,10 @@ class HyenaDNAEmbedder(BaseEmbedder):
         # NOTE the git lfs download command will add this,
         # but we actually dont use LFS for BEND itself.
         if not is_git_lfs_repo:
-            os.remove('.git/hooks/pre-push')
+            try:
+                os.remove('.git/hooks/pre-push')
+            except FileNotFoundError:
+                pass
 
 
 
@@ -946,6 +949,7 @@ class OneHotEmbedder(BaseEmbedder):
         embeddings = []
         for s in tqdm(sequences, disable=disable_tqdm):
             s = self._transform_integer(s, return_onehot = return_onehot)
+            s = s[None,:] # dummy batch dim, as customary for embeddings
             embeddings.append(s)
         return embeddings
     
