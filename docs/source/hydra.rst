@@ -135,10 +135,7 @@ Below is an example of one such config file.
     num_workers : 0
     padding_value : -100
     shuffle : 5000
-    data_dir : ./data/${task}/${embedder}/ # directory where the tf reoc
-    train_data : [train.tfrecord] # list of tfrecords to be used for training
-    valid_data : [valid.tfrecord] # list of tfrecords to be used for validation
-    test_data :  [test.tfrecord] # list of tfrecords to be used for testing
+    data_dir : ./data/${task}/${embedder}/ # directory where the tar files are stored
     # cross_validation : 1 # which number fold to run for Cross validation (use either this or the above train/test/valid options)
   params: # training arguments
     epochs: 100

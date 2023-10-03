@@ -86,7 +86,7 @@ def return_dataloader(data : Union[str, list],
     Parameters
     ----------
     data : Union[str, list]
-        Path to tfrecord or list of paths to tar files.
+        Path to single tar file or list of paths to tar files.
     batch_size : int, optional
         Batch size. The default is 8.
     num_workers : int, optional

@@ -35,7 +35,7 @@ We recommend installing BEND in a conda environment with Python 3.10.
 
 ### 3. Computing embeddings
 
-For training downstream models, it is practical to precompute and save the embeddings to avoid recomputing them at each epoch. As embeddings can grow large when working with genomes, we use TFRecords as the format.
+For training downstream models, it is practical to precompute and save the embeddings to avoid recomputing them at each epoch. As embeddings can grow large when working with genomes, we use tar files as the format.
 Firstly download the desired data from the [data folder](https://sid.erda.dk/cgi-sid/ls.py?share_id=eXAmVvbRSW) and place it in BEND/ (for ease of use maintain the same folder structure). 
 To precompute the embeddings for all models and tasks, run : 
 ```
@@ -89,7 +89,7 @@ embedder = HyenaDNAEmbedder('pretrained_models/hyenadna/hyenadna-tiny-1k-seqlen'
 #### Training and evaluating supervised models
 
 It is first required that the [above step (computing the embeddings)](#2-computing-embeddings) is completed.
-The embeddings should afterwards be located in `BEND/data/{task_name}/{embedder}/*tfrecords`
+The embeddings should afterwards be located in `BEND/data/{task_name}/{embedder}/*tar.gz`
 
 To run a downstream task run (from `BEND/`):
 ```
