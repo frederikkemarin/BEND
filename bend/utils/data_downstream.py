@@ -53,7 +53,7 @@ def collate_fn_pad_to_longest(batch,
     if isinstance(batch, torch.Tensor):
         return batch
 
-    # batch = list(zip(*batch))
+    batch = list(zip(*batch))
     padded = tuple(map(partial(pad_to_longest, padding_value = padding_value, batch_first = True), batch))
 
     if padding_value !=0: # make sure features do no have padding value 
@@ -111,13 +111,8 @@ def return_dataloader(data : Union[str, list],
     dataset = dataset.map(partial(collate_fn_pad_to_longest, padding_value = padding_value))
 
 
-    dataloader = wds.WebLoader(dataset, num_workers=4, batch_size=None)
+    dataloader = wds.WebLoader(dataset, num_workers=num_workers, batch_size=None)
 
-    # dataloader = torch.utils.data.DataLoader(dataset, 
-    #                                          batch_size=batch_size, 
-    #                                          num_workers=num_workers, 
-    #                                          collate_fn=partial(collate_fn_pad_to_longest, 
-    #                                                             padding_value = padding_value))
     return dataloader
 
 def get_data(data_dir : str, 
