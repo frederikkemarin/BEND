@@ -2,16 +2,16 @@
 data_downstream.py
 ==================
 Data loading and processing utilities for training
-downsteam tasks on embeddings saved in tfrecord format.
+downsteam tasks on embeddings saved in webdataset .tar.gz format.
 """
 
-# create torch dataset & dataloader from tfrecord
+# create torch dataset & dataloader from webdataset
 import torch
-from bend.io.datasets import TFRecordIterableDataset
 from functools import partial
 import os
 import glob
 from typing import List, Tuple, Union
+import webdataset as wds
 
 def pad_to_longest(sequences: List[torch.Tensor], padding_value = -100, batch_first=True):
     '''Pad a list of sequences to the longest sequence in the list.
@@ -100,13 +100,19 @@ def return_dataloader(data : Union[str, list],
     # '''Load data to dataloader from a list of paths or a single path'''
     if isinstance(data, str):
         data = [data]
-    dataset = TFRecordIterableDataset(data, shuffle = shuffle)
+    dataset = wds.WebDataset(data)
+    dataset = dataset.decode() # iterator over samples - each sample is dict with keys "input.npy" and "output.npy"
+    dataset = dataset.to_tuple("input.npy", "output.npy")
+    dataset = dataset.map_tuple(torch.from_numpy, torch.from_numpy) # TODO any specific dtype requirements or all handled already?
 
-    dataloader = torch.utils.data.DataLoader(dataset, 
-                                             batch_size=batch_size, 
-                                             num_workers=num_workers, 
-                                             collate_fn=partial(collate_fn_pad_to_longest, 
-                                                                padding_value = padding_value))
+    # untested from here on
+    dataset = dataset.map_tuple(torch.squeeze, torch.squeeze) # necessary for collate_fn_pad_to_longest ?
+    dataset = dataset.batched(batch_size, collation_fn = None) #returns list of tuples
+    dataset = dataset.map(partial(collate_fn_pad_to_longest, padding_value = padding_value))
+
+
+    dataloader = wds.WebLoader(dataset, num_workers=num_workers, batch_size=None)
+
     return dataloader
 
 def get_data(data_dir : str, 
@@ -157,33 +163,43 @@ def get_data(data_dir : str,
     """
     # check if data exists 
     if not os.path.exists(data_dir):
-        raise SystemExit('The data disrectory does not exists\nExiting script')
+        print(data_dir)
+        raise SystemExit(f'The data directory {data_dir} does not exist\nExiting script')
     if cross_validation is not False:
         cross_validation = int(cross_validation) -1 
         # get basepath of data directory
-        # get all tfrecords in data directory
-        tfrecords = glob.glob(f'{data_dir}/*.tfrecord')
+        # get all tar.gz in data directory
+        tars = glob.glob(f'{data_dir}/*.tar.gz')
         # sort tfrecords
-        #tfrecords.sort()
-        tfrecords = sorted(tfrecords, key=lambda x: int(x.split('/')[-1].split('.')[0][4:]))
-        test_data = tfrecords[cross_validation]
-        # get valid data, cycle through tfrecords if test set is the last one
-        if cross_validation == len(tfrecords) - 1:
-            valid_data = tfrecords[0]
+        tars = sorted(tars, key=lambda x: int(x.split('/')[-1].split('.')[0][4:]))
+        test_data = tars[cross_validation]
+        # get valid data, cycle through tar.gz if test set is the last one
+        if cross_validation == len(tars) - 1:
+            valid_data = tars[0]
         else:
-            valid_data = tfrecords[cross_validation + 1] 
+            valid_data = tars[cross_validation + 1] 
         # get train data, remove test and valid data from list of tfrecords
-        tfrecords.remove(test_data)
-        tfrecords.remove(valid_data)
-        train_data = tfrecords
-    else: 
-        # join data_dir with each item in train_data, valid_data and test_data 
+        tars.remove(test_data)
+        tars.remove(valid_data)
+        train_data = tars
 
-        train_data = [f'{data_dir}/{x}' for x in train_data] if train_data else None
-        valid_data = [f'{data_dir}/{x}' for x in valid_data] if valid_data else None
-        test_data = [f'{data_dir}/{x}' for x in test_data] if test_data else None
+    # TODO chunking loading done right - need to support both this and the commented out block.
+    else:
+        tars = glob.glob(f'{data_dir}/*.tar.gz')
+        train_data = [x for x in tars if os.path.split(x)[-1].startswith('train')]
+        valid_data = [x for x in tars if os.path.split(x)[-1].startswith('valid')]
+        test_data = [x for x in tars if os.path.split(x)[-1].startswith('test')]
+
+
+    # else: 
+    #     # join data_dir with each item in train_data, valid_data and test_data 
+
+    #     train_data = [f'{data_dir}/{x}' for x in train_data] if train_data else None
+    #     valid_data = [f'{data_dir}/{x}' for x in valid_data] if valid_data else None
+    #     test_data = [f'{data_dir}/{x}' for x in test_data] if test_data else None
 
     # get dataloaders
+    # import ipdb; ipdb.set_trace()
     train_dataloader = return_dataloader(train_data, batch_size = batch_size, 
                                          num_workers = num_workers, 
                                          padding_value=padding_value, 

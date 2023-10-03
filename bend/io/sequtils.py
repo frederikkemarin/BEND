@@ -3,22 +3,36 @@ sequtils.py
 ===========
 Utilities for processing genome coordinate-based sequence data to embeddings.
 """
-import tqdm
-import tensorflow as tf
+from tqdm.auto import tqdm
 import pysam
-from bioio.tf.utils import multi_hot
 import pandas as pd
+import numpy as np
+import webdataset as wds
 import h5py
 
-# %%
 baseComplement = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A'}
-#
-#def has_header(file, nrows=20):
-#    df = pd.read_csv(file, header=None, nrows=nrows, sep='\t')
-#    df_header = pd.read_csv(file, nrows=nrows, sep='\t')
-#    return tuple(df.dtypes) != tuple(df_header.dtypes)
-#
-# %%
+
+def multi_hot(labels, num_labels):
+    """
+    Convert a numpy array to a one-hot encoded numpy array.
+
+    Parameters
+    ----------
+    labels : list
+        The labels that are true
+    num_labels : int
+        The number of potential labels.
+
+    Returns
+    -------
+    numpy.ndarray
+        A multi-hot encoded numpy array.
+    """
+    encoded = np.zeros((num_labels), dtype=np.int64)
+    for i, row in enumerate(labels):
+        encoded[row] = 1
+    return encoded
+
 def reverse_complement(dna_string: str):
     # """Returns the reverse-complement for a DNA string."""
     """
@@ -87,69 +101,38 @@ class Fasta():
         
         return sequence
 
-# %%
-def embed_from_multilabled_bed_gen(bed, reference_fasta, embedder, label_column_idx, label_depth):
-    """
-    Embed sequences from a bed file and multi-hot encode labels.
-
-    Parameters
-    ----------
-    bed : str
-        Path to a bed file.
-    reference_fasta : str
-        Path to a reference genome fasta file.
-    embedder : function
-        Function for embedding a sequence.
-    label_column_idx : int
-        Index of the column containing the labels.
-    label_depth : int
-        Number of labels.
-
-    Yields
-    ------
-    dict
-        Dictionary containing the embedded sequence and multi-hot encoded labels.
-        Keys are 'inputs' and 'outputs'.
-    """
-    fasta = Fasta(reference_fasta)
-    with open(bed) as f:
-        for line in tqdm.tqdm(f):
-            # get bed row
-            row = line.strip().split('\t')
-            chrom, start, end, strand = row[0], int(row[1]), int(row[2]), row[5]
-            labels = list(map(int, row[label_column_idx].split(',')))
-
-            # get sequence
-            sequence = fasta.fetch(chrom, start, end, strand)
-
-            # embed sequence and multi-hot encode labels
-            sequence_embed = tf.squeeze(tf.constant(embedder(sequence)))
-            labels_multi_hot = multi_hot(labels, depth=label_depth)
-
-            yield {'inputs': sequence_embed, 'outputs': labels_multi_hot}
 
 
-def embed_from_bed(bed, reference_fasta, embedder, hdf5_file= None,
+
+def embed_from_bed(bed, reference_fasta, embedder, 
+                    output_path,
+                   hdf5_file= None,
                    chunk_size = None, chunk: int = None, 
                    upsample_embeddings = False,
                     read_strand = False, label_column_idx=6, 
                   label_depth=None, split = None, flank = 0):
     fasta = Fasta(reference_fasta)
-    #header = 'infer' if has_header(bed) else None
-    f = pd.read_csv(bed, header = 'infer', sep = '\t')
+    f = pd.read_csv(bed, header = 'infer', sep = '\t', low_memory=False)
     if split: 
         f = f[f.iloc[:, -1] == split]
     label_column_idx = f.columns.get_loc('label') if 'label' in f.columns else label_column_idx
     strand_column_idx = f.columns.get_loc('strand') if 'strand' in f.columns else 3
     # open hdf5 file 
     hdf5_file = h5py.File(hdf5_file, mode = "r") if hdf5_file else None
+    
     if chunk is not None:
-        # chunk f into chunk_size chunks
-        f_chunked = [f[i:i+chunk_size] for i in range(0, f.shape[0], chunk_size)]
-        # get only the desired chunk 
-        f = f_chunked[chunk]
+        # check if chunk is valid 
+        if chunk * chunk_size > len(f):
+            raise ValueError(f'Requested chunk {chunk}, but chunk ids range from 0-{int(len(f) / chunk_size)}')
+        f = f[chunk*chunk_size:(chunk+1)*chunk_size].reset_index(drop=True)
 
-    for n, line in tqdm.tqdm(f.iterrows(), total=len(f), desc='Embedding sequences'):
+    buffer_inputs = []
+    buffer_labels = []
+    start_offset = chunk*chunk_size
+    buffer_size=5000
+
+    sink = wds.TarWriter(output_path, compress=True)
+    for n, line in tqdm(f.iterrows(), total=len(f), desc='Embedding sequences'):
         # get bed row
         if read_strand:
             chrom, start, end, strand = line.iloc[0], int(line.iloc[1]), int(line.iloc[2]), line.iloc[strand_column_idx]
@@ -160,7 +143,7 @@ def embed_from_bed(bed, reference_fasta, embedder, hdf5_file= None,
         else: 
             labels = line.iloc[label_column_idx]
             labels = list(map(int, labels.split(','))) if isinstance(labels, str) else [] # if no label for sample
-            labels = multi_hot(labels, depth=label_depth)
+            labels = multi_hot(labels, label_depth)
         # get sequence
         sequence = fasta.fetch(chrom, start, end, strand = strand, flank = flank) # categorical labels
         # embed sequence
@@ -169,8 +152,17 @@ def embed_from_bed(bed, reference_fasta, embedder, hdf5_file= None,
             print(f'Embedding length does not match sequence length ({sequence_embed.shape[1]} != {len(sequence)} : {n} {chrom}:{start}-{end}{strand})')
             print(n, chrom, start, end, strand)
             continue
-        sequence_embed = tf.squeeze(tf.constant(sequence_embed))
-        yield {'inputs': sequence_embed, 'outputs': labels}
+
+        sink.write({
+            "__key__": f"sample_{n + start_offset}",
+            "input.npy": sequence_embed,
+            "output.npy": labels
+        })
+
+    sink.close()
+
+
+
 
 
 def get_splits(bed):

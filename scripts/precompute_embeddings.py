@@ -4,9 +4,7 @@ import torch
 import os
 import bend.io.sequtils as sequtils
 import pandas as pd
-from bioio.tf import dataset_from_iterable
-#from bioio.tf import dataset_to_tfrecord
-from bend.io.datasets import dataset_to_tfrecord
+import numpy as np
 import sys
 # load config 
 @hydra.main(config_path="../conf/embedding/", config_name="embed", version_base=None)
@@ -36,32 +34,23 @@ def run_experiment(cfg: DictConfig) -> None:
 
         # embed in chunks 
         # get length of bed file and divide by chunk size, if a spcific chunk is not set 
-        df = pd.read_csv(cfg[cfg.task].bed, sep = '\t')
+        df = pd.read_csv(cfg[cfg.task].bed, sep = '\t', low_memory=False)
         df = df[df.iloc[:, -1] == split] if split is not None else df
-        possible_chunks = list(range(int(len(df) /cfg.chunk_size)+1))
+        possible_chunks = list(range(int(len(df) /cfg.chunk_size)+1))         
         if cfg.chunk is None: 
             cfg.chunk = possible_chunks
-        else:
-            chunks_ok = []
-            for chunk in cfg.chunk:
-                if chunk in possible_chunks:
-                    chunks_ok.append(chunk)
-                else:
-                    print(f'Skipping impossible chunk {chunk}')
-                    # raise ValueError(f'Requested chunk {chunk}, but chunk ids range from {min(possible_chunks)}-{max(possible_chunks)}')
-            
         # embed in chunks
-        for chunk in chunks_ok: 
+        for n, chunk in enumerate(cfg.chunk): 
             print(f'Embedding chunk {chunk}/{len(possible_chunks)}')
-            gen = sequtils.embed_from_bed(**cfg[cfg.task], embedder = embedder, split = split, chunk = chunk, chunk_size = cfg.chunk_size,   
+
+            
+            sequtils.embed_from_bed(**cfg[cfg.task], embedder = embedder, 
+                                        output_path = f'{output_dir}/{split}_{chunk}.tar.gz',
+                                        split = split, chunk = chunk, chunk_size = cfg.chunk_size,   
                                         upsample_embeddings = cfg[cfg.model]['upsample_embeddings'] if 'upsample_embeddings' in cfg[cfg.model] else False)
-            # save the embeddings to tfrecords 
-            dataset = dataset_from_iterable(gen)
-            dataset.element_spec
-            dataset_to_tfrecord(dataset, f'{output_dir}/{split}_{chunk}.tfrecord')
+            
+            
         
-
-
 
 if __name__ == '__main__':
     

@@ -1,5 +1,5 @@
 defaults:
-  - datadims : [label_dims,embedding_dims]
+  - datadims : [label_dims,embedding_dims,seq_lengths, downstream_downsample]
   - hydra : multirun
   - override hydra/launcher: joblib # ability to launch jobs in parallel fashion
   - _self_
@@ -11,9 +11,6 @@ hydra :
       model: gena-lm-bigbird-base-t2t,
              gena-lm-bert-large-t2,
              hyenadna-tiny-1k,
-             hyenadna-small-32k,
-             hyenadna-medium-160k,
-             hyenadna-medium-450k,
              hyenadna-large-1m,
              dnabert6,
              resnetlm,
@@ -23,6 +20,9 @@ hydra :
              nt_transformer_1000g,
              dnabert2,
              onehot
+             #hyenadna-small-32k,
+             #hyenadna-medium-160k,
+             #hyenadna-medium-450k,
       task: 
             gene_finding,
             enhancer_annotation,
