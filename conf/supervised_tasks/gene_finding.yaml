@@ -48,9 +48,6 @@ data:
   shuffle : 1000
   parent_dir : ./data
   data_dir : ${data.parent_dir}/${task}/${embedder}/
-  train_data : [train.tfrecord]
-  valid_data : [valid.tfrecord]
-  test_data :  [test.tfrecord]
 params:
   epochs: 100
   load_checkpoint: false

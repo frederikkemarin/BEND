@@ -48,9 +48,6 @@ data:
   num_workers : 0
   padding_value : -100
   shuffle : 200
-  train_data : [train.tfrecord]
-  valid_data : [valid.tfrecord]
-  test_data :  [test.tfrecord]
 params:
   epochs: 100
   load_checkpoint: true
