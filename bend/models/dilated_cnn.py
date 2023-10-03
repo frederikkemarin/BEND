@@ -197,6 +197,7 @@ class OneHotEmbedding(nn.Module):
         -------
         torch.Tensor
         """
+        
         if x.dim() > 2: # already onehot embedded 
             return x
         else: # if categorically encoded 

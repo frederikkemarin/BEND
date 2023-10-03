@@ -81,12 +81,12 @@ def return_dataloader(data : Union[str, list],
                       padding_value = -100, 
                       shuffle : int = None):
     """
-    Function to return a dataloader from a list of tfrecords or a single tfrecord.
+    Function to return a dataloader from a list of tar files or a single one.
     
     Parameters
     ----------
     data : Union[str, list]
-        Path to tfrecord or list of paths to tfrecords.
+        Path to tfrecord or list of paths to tar files.
     batch_size : int, optional
         Batch size. The default is 8.
     num_workers : int, optional
@@ -127,19 +127,19 @@ def get_data(data_dir : str,
              **kwargs):
 
     """
-    Function to get data from tfrecords.
+    Function to get data from tar files.
     
     Parameters
     ----------
     data_dir : str
-        Path to data directory containing the tfrecords.
+        Path to data directory containing the tar files.
     train_data : List[str], optional
-        List of paths to train tfrecords. The default is None.
+        List of paths to train tar files. The default is None.
         In case of cross validation can be simply the path to the data directory.
     valid_data : List[str], optional
-        List of paths to valid tfrecords. The default is None.
+        List of paths to valid tar files. The default is None.
     test_data : List[str], optional
-        List of paths to test tfrecords. The default is None.
+        List of paths to test tar files. The default is None.
     cross_validation : Union[bool, int], optional
         If int, use the given partition as test set, +1 as valid set and the rest as train set.
         First split is 1. The default is False.
@@ -170,7 +170,7 @@ def get_data(data_dir : str,
         # get basepath of data directory
         # get all tar.gz in data directory
         tars = glob.glob(f'{data_dir}/*.tar.gz')
-        # sort tfrecords
+        # sort tar files
         tars = sorted(tars, key=lambda x: int(x.split('/')[-1].split('.')[0][4:]))
         test_data = tars[cross_validation]
         # get valid data, cycle through tar.gz if test set is the last one
@@ -178,7 +178,7 @@ def get_data(data_dir : str,
             valid_data = tars[0]
         else:
             valid_data = tars[cross_validation + 1] 
-        # get train data, remove test and valid data from list of tfrecords
+        # get train data, remove test and valid data from list of tar files
         tars.remove(test_data)
         tars.remove(valid_data)
         train_data = tars
@@ -189,7 +189,6 @@ def get_data(data_dir : str,
         train_data = [x for x in tars if os.path.split(x)[-1].startswith('train')]
         valid_data = [x for x in tars if os.path.split(x)[-1].startswith('valid')]
         test_data = [x for x in tars if os.path.split(x)[-1].startswith('test')]
-
 
     # else: 
     #     # join data_dir with each item in train_data, valid_data and test_data 
