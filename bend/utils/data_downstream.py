@@ -2,10 +2,10 @@
 data_downstream.py
 ==================
 Data loading and processing utilities for training
-downsteam tasks on embeddings saved in tfrecord format.
+downsteam tasks on embeddings saved in webdataset .tar.gz format.
 """
 
-# create torch dataset & dataloader from tfrecord
+# create torch dataset & dataloader from webdataset
 import torch
 from functools import partial
 import os
@@ -168,28 +168,27 @@ def get_data(data_dir : str,
     if cross_validation is not False:
         cross_validation = int(cross_validation) -1 
         # get basepath of data directory
-        # get all tfrecords in data directory
-        tfrecords = glob.glob(f'{data_dir}/*.tfrecord')
+        # get all tar.gz in data directory
+        tars = glob.glob(f'{data_dir}/*.tar.gz')
         # sort tfrecords
-        #tfrecords.sort()
-        tfrecords = sorted(tfrecords, key=lambda x: int(x.split('/')[-1].split('.')[0][4:]))
-        test_data = tfrecords[cross_validation]
-        # get valid data, cycle through tfrecords if test set is the last one
-        if cross_validation == len(tfrecords) - 1:
-            valid_data = tfrecords[0]
+        tars = sorted(tars, key=lambda x: int(x.split('/')[-1].split('.')[0][4:]))
+        test_data = tars[cross_validation]
+        # get valid data, cycle through tar.gz if test set is the last one
+        if cross_validation == len(tars) - 1:
+            valid_data = tars[0]
         else:
-            valid_data = tfrecords[cross_validation + 1] 
+            valid_data = tars[cross_validation + 1] 
         # get train data, remove test and valid data from list of tfrecords
-        tfrecords.remove(test_data)
-        tfrecords.remove(valid_data)
-        train_data = tfrecords
+        tars.remove(test_data)
+        tars.remove(valid_data)
+        train_data = tars
 
-    # TODO chunking done right
+    # TODO chunking loading done right - need to support both this and the commented out block.
     else:
-        tfrecords = glob.glob(f'{data_dir}/*.tfrecord')
-        train_data = [x for x in tfrecords if os.path.split(x)[-1].startswith('train')]
-        valid_data = [x for x in tfrecords if os.path.split(x)[-1].startswith('valid')]
-        test_data = [x for x in tfrecords if os.path.split(x)[-1].startswith('test')]
+        tars = glob.glob(f'{data_dir}/*.tar.gz')
+        train_data = [x for x in tars if os.path.split(x)[-1].startswith('train')]
+        valid_data = [x for x in tars if os.path.split(x)[-1].startswith('valid')]
+        test_data = [x for x in tars if os.path.split(x)[-1].startswith('test')]
 
 
     # else: 

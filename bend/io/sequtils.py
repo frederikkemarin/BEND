@@ -4,21 +4,14 @@ sequtils.py
 Utilities for processing genome coordinate-based sequence data to embeddings.
 """
 from tqdm.auto import tqdm
-# import tensorflow as tf
 import pysam
-# from bioio.tf.utils import multi_hot
 import pandas as pd
 import numpy as np
 import webdataset as wds
-
+import h5py
 
 baseComplement = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A'}
-#
-#def has_header(file, nrows=20):
-#    df = pd.read_csv(file, header=None, nrows=nrows, sep='\t')
-#    df_header = pd.read_csv(file, nrows=nrows, sep='\t')
-#    return tuple(df.dtypes) != tuple(df_header.dtypes)
-#
+
 def multi_hot(labels, num_labels):
     """
     Convert a numpy array to a one-hot encoded numpy array.
@@ -159,8 +152,7 @@ def embed_from_bed(bed, reference_fasta, embedder,
             print(f'Embedding length does not match sequence length ({sequence_embed.shape[1]} != {len(sequence)} : {n} {chrom}:{start}-{end}{strand})')
             print(n, chrom, start, end, strand)
             continue
-        #ds['inputs'][n + (chunk*chunk_size)] = sequence_embed
-        #ds['labels'][n + (chunk*chunk_size)] = labels
+
         sink.write({
             "__key__": f"sample_{n + start_offset}",
             "input.npy": sequence_embed,
