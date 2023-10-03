@@ -13,7 +13,7 @@ To add a new DNA LM to BEND, you need to implement a new Embedder class in  ``be
 
 
 Implementing the ``load_model`` method
-======================================
+**************************************
 
 The ``load_model`` method should load the pretrained model and tokenizer, and store them as attributes of the class.
 Additionally, it should ensure that the model is in eval mode and move the model to ``device``, which is a global variable defined in ``bend.utils.embedders.py``.
@@ -21,7 +21,7 @@ If there are other configurations that need to be set for the model, they should
 
 
 Implementing the ``embed`` method
-=================================
+*********************************
 
 The ``embed`` method should take a list of DNA sequences as input and return a list of embeddings for each sequence. The input sequences are provided as a list of strings, where each string is a DNA sequence. The output embeddings should be a list of numpy arrays, where each numpy array is the embedding for the corresponding input sequence.
 

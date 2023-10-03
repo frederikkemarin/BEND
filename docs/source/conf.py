@@ -39,3 +39,6 @@ html_theme = 'sphinx_rtd_theme'
 # html_theme = 'alabaster'
 html_static_path = ['_static']
 autodoc_mock_imports = ['wandb']
+
+
+autoclass_content = 'both'
