@@ -28,7 +28,7 @@ def multi_hot(labels, num_labels):
     numpy.ndarray
         A multi-hot encoded numpy array.
     """
-    encoded = np.zeros((num_labels))
+    encoded = np.zeros((num_labels), dtype=np.int64)
     for i, row in enumerate(labels):
         encoded[row] = 1
     return encoded

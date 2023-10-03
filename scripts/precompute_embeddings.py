@@ -42,24 +42,6 @@ def run_experiment(cfg: DictConfig) -> None:
         # embed in chunks
         for n, chunk in enumerate(cfg.chunk): 
             print(f'Embedding chunk {chunk}/{len(possible_chunks)}')
-            # if os.path.exists(f'{output_dir}/{split}_{chunk}.hdf5'):
-            #     print(f'{split}_{chunk} is already embedded')
-            #     continue
-            # create hdf5 file to write too
-            # ds = h5py.File(f'{output_dir}/{split}_{chunk}.hdf5', 'w')
-            # dims = (len(df), 
-            #         cfg.datadims[f'{cfg.task}_length'], 
-            #         cfg.datadims[cfg.model] ) if cfg.model != 'onehot' else (len(df), 
-            #                                                                 cfg.datadims[f'{cfg.task}_length'] )
-            # ds.create_dataset('inputs', (dims), 
-            #                 compression="gzip",
-            #                 dtype='float64')
-            
-            # dims = (len(df), cfg.datadims[f'{cfg.task}_length']) if cfg.datadims.output_downsample_window[cfg.task] is None else (len(df), cfg.datadims[f'{cfg.task}'])
-            # ds.create_dataset('labels', (dims), 
-            #                 compression="gzip",
-            #                 dtype='float64')
-            # ds.close()
 
             
             sequtils.embed_from_bed(**cfg[cfg.task], embedder = embedder, 
