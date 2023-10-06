@@ -248,7 +248,7 @@ class DNABertEmbedder(BaseEmbedder):
                 if upsample_embeddings:
                     embedding = self._repeat_embedding_vectors(embedding)
 
-                embeddings.append(embedding[:,1:-1] if remove_special_tokens else embedding)
+                embeddings.append(embedding[:,1:-1].detach().cpu().numpy() if remove_special_tokens else embedding.detach().cpu().numpy())
 
         return embeddings
 
