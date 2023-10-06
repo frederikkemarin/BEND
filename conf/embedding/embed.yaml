@@ -15,12 +15,12 @@ hydra :
              hyenadna-large-1m,
              dnabert6,
              resnetlm,
-             awdlstm,
              nt_transformer_ms,
              nt_transformer_human_ref,
              nt_transformer_1000g,
              dnabert2,
-             onehot
+             onehot, 
+             awdlstm
              #hyenadna-small-32k,
              #hyenadna-medium-160k,
              #hyenadna-medium-450k,

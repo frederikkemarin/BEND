@@ -48,7 +48,6 @@ def run_experiment(cfg: DictConfig) -> None:
         with open_dict(cfg):
             cfg.model.update(cfg.supervised_encoder[cfg.embedder])
     model = hydra.utils.instantiate(cfg.model).to(device).float()
-    print(model)
     # put model on dataparallel
     if torch.cuda.device_count() > 1:
         from bend.models.downstream import CustomDataParallel

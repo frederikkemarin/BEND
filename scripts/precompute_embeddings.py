@@ -46,7 +46,7 @@ def run_experiment(cfg: DictConfig) -> None:
             if chunk not in possible_chunks:
                 print(f'{chunk} is not a valid chunk id. {split} chunk ids are {possible_chunks}')
                 continue
-            print(f'Embedding chunk {chunk}/{len(possible_chunks)}')
+            print(f'Embedding chunk {chunk} ({chunk +1}/{len(possible_chunks)})')
             sequtils.embed_from_bed(**cfg[cfg.task], embedder = embedder, 
                                         output_path = f'{output_dir}/{split}_{chunk}.tar.gz',
                                         split = split, chunk = chunk, chunk_size = cfg.chunk_size,   

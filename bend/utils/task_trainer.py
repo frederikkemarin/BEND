@@ -415,7 +415,9 @@ class BaseTrainer:
             The loss for the batch.
         """
         self.model.train()
+        
         data, target = batch
+        
         with torch.autocast(device_type='cuda', dtype=torch.float16):
             output = self.model(data.to(self.device), length = target.shape[-1], 
                                 activation = self.config.params.activation) 
