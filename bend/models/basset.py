@@ -142,10 +142,13 @@ class Basset(nn.Module):
             layers.append(nn.MaxPool1d(pool, pool))
             prev_input_size = kernels
             out_len = input_len//pool
+            input_len = out_len
+            # 170 out_len 0
+            # 128 out_len 1
+            # 128 out_len 2
 
         self.conv_net = nn.Sequential(*layers)
 
-        # TODO the 10 is being implied by the seq len coming in.
         self.clf = nn.Sequential(
             nn.Flatten(),
             nn.Linear(prev_input_size*out_len, 1000),

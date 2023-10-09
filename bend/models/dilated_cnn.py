@@ -202,6 +202,9 @@ class OneHotEmbedding(nn.Module):
             return x
         else: # if categorically encoded 
             return F.one_hot(x.long(), num_classes=self.hidden_size).float()
+        
+    def extra_repr(self):
+        return f"hidden_size={self.hidden_size}"
 
 
 
