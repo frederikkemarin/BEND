@@ -240,7 +240,7 @@ class DNABertEmbedder(BaseEmbedder):
                     output = []
                     for chunk in model_input: 
                         output.append(self.bert_model(chunk.to(device))[0].detach().cpu())
-                    output = torch.cat(output, dim=1)
+                    output = torch.cat(output, dim=1).detach().cpu().numpy()
                 else:
                     output = self.bert_model(model_input.to(device))[0].detach().cpu().numpy()
                 embedding = output
@@ -248,7 +248,7 @@ class DNABertEmbedder(BaseEmbedder):
                 if upsample_embeddings:
                     embedding = self._repeat_embedding_vectors(embedding)
 
-                embeddings.append(embedding[:,1:-1].detach().cpu().numpy() if remove_special_tokens else embedding.detach().cpu().numpy())
+                embeddings.append(embedding[:,1:-1] if remove_special_tokens else embedding)
 
         return embeddings
 
