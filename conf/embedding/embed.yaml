@@ -20,7 +20,8 @@ hydra :
              nt_transformer_1000g,
              dnabert2,
              onehot, 
-             awdlstm
+             awdlstm,
+             nt_transformer_v2_500m
              #hyenadna-small-32k,
              #hyenadna-medium-160k,
              #hyenadna-medium-450k,
@@ -91,6 +92,10 @@ nt_transformer_1000g:
   upsample_embeddings : true
 onehot:
   _target_ : bend.utils.embedders.OneHotEmbedder
+nt_transformer_v2_500m:
+  _target_ : bend.utils.embedders.NucleotideTransformerEmbedder
+  model_name: InstaDeepAI/nucleotide-transformer-v2-500m-multi-species
+  upsample_embeddings: true
 # data configurations for each task
 gene_finding:
   reference_fasta : ${data_dir}/genomes/GRCh38.primary_assembly.genome.fa

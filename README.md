@@ -35,7 +35,7 @@ We recommend installing BEND in a conda environment with Python 3.10.
 
 ### 3. Computing embeddings
 
-For training downstream models, it is practical to precompute and save the embeddings to avoid recomputing them at each epoch. As embeddings can grow large when working with genomes, we use tar files as the format.
+For training downstream models, it is practical to precompute and save the embeddings to avoid recomputing them at each epoch. As embeddings can grow large when working with genomes, we use [Webdataset](https://github.com/webdataset/webdataset) `tar.gz` files as the format.
 Firstly download the desired data from the [data folder](https://sid.erda.dk/cgi-sid/ls.py?share_id=eXAmVvbRSW) and place it in BEND/ (for ease of use maintain the same folder structure). 
 To precompute the embeddings for all models and tasks, run : 
 ```
@@ -58,7 +58,7 @@ Embedders have a default-true argument `remove_special_tokens=True` in `embed()`
 | Embedder | Reference | Models | Info |
 | --- | --- | --- | ---|
 |DNABertEmbedder | [Ji et al.](https://academic.oup.com/bioinformatics/article/37/15/2112/6128680) | [4 different k-mer tokenizations available](https://github.com/jerryji1993/DNABERT#32-download-pre-trained-dnabert)  | has an additional argument `kmer=6` to specify the k-mer size.|
-|NucleotideTransformerEmbedder| [Dalla-Torre et al.](https://www.biorxiv.org/content/10.1101/2023.01.11.523679v2) | [4 different models available](https://huggingface.co/InstaDeepAI) | |
+|NucleotideTransformerEmbedder| [Dalla-Torre et al.](https://www.biorxiv.org/content/10.1101/2023.01.11.523679v2) | [8 different models available](https://huggingface.co/InstaDeepAI) | |
 |ConvNetEmbedder| BEND | [1 model available](https://sid.erda.dk/cgi-sid/ls.py?share_id=eXAmVvbRSW&current_dir=pretrained_models&flags=f) | A baseline LM used in BEND.
 |AWDLSTMEmbedder| BEND | [1 model available](https://sid.erda.dk/cgi-sid/ls.py?share_id=eXAmVvbRSW&current_dir=pretrained_models&flags=f) | A baseline LM used in BEND.
 |GPNEmbedder| [Benegas et al.](https://www.biorxiv.org/content/10.1101/2022.08.22.504706v2) | Models trained on [*A. thaliana*](https://huggingface.co/songlab/gpn-arabidopsis) and [Brassicales](https://huggingface.co/songlab/gpn-brassicales) available | This LM was not evaluated in BEND as it was not trained on the human genome. |
@@ -188,6 +188,7 @@ The datasets included in BEND were collected from a variety of sources. When you
 
 ### Chromatin accessibility ([ENCODE](https://www.encodeproject.org/))
 ### Histone modification ([ENCODE](https://www.encodeproject.org/))
+### CpG methylation ([ENCODE](https://www.encodeproject.org/))
 
     @article{noauthor_integrated_2012,
 	title = {An {Integrated} {Encyclopedia} of {DNA} {Elements} in the {Human} {Genome}},
