@@ -422,12 +422,10 @@ class BaseTrainer:
         self.model.train()
         
         data, target = batch
-        
         with torch.autocast(device_type='cuda', dtype=torch.float16):
-            output = self.model(data.to(self.device), length = target.shape[-1], 
+            output = self.model(x = data.to(self.device), length = target.shape[-1], 
                                 activation = self.config.params.activation) 
-            #if self.config.task == 'chromatin_accessibility' or self.config.task == 'histone_modification':
-            #    output = output.squeeze(1)
+    
             loss = self.criterion(output, target.to(self.device).long())
             loss = loss / self.gradient_accumulation_steps
         # Accumulates scaled gradients.

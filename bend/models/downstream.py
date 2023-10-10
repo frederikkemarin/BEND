@@ -298,8 +298,8 @@ class ConvNetForSupervised(nn.Module):
             output_length is determined by the input length, the upsampling factor, and the output downsampling window.
 
         """
-        x = self.encoder(input_ids=x, **kwargs).last_hidden_state
-        x = self.downstream_cnn(x, activation = activation)
+        x = self.encoder(x, **kwargs).last_hidden_state
+        x = self.downstream_cnn(x, activation = activation, **kwargs)
 
         return x
 
