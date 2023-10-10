@@ -26,7 +26,7 @@ hydra :
                  onehot,
                  awdlstm,
                  resnet-supervised, 
-                 basset-supervised
+                 nt_transformer_v2_500m
 embedder : onehot
 task : enhancer_annotation 
 output_dir: ./downstream_tasks/${task}/${embedder}/split_${data.cross_validation}

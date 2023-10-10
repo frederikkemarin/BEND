@@ -25,7 +25,7 @@ hydra :
                  onehot,
                  awdlstm,
                  resnet-supervised,
-                 basset-supervised
+                 nt_transformer_v2_500m
 task : gene_finding 
 embedder : onehot
 output_dir: ./downstream_tasks/${task}/${embedder}/

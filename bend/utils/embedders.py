@@ -30,7 +30,7 @@ from bend.models.dnabert2 import BertModel as DNABert2BertModel
 from bend.utils.download import download_model
 
 from tqdm.auto import tqdm
-from transformers import logging, BertModel, BertConfig, BertTokenizer, AutoModel, AutoTokenizer, BigBirdModel
+from transformers import logging, BertModel, BertConfig, BertTokenizer, AutoModel, AutoTokenizer, BigBirdModel, AutoModelForMaskedLM
 from sklearn.preprocessing import LabelEncoder
 logging.set_verbosity_error()
 
@@ -240,7 +240,7 @@ class DNABertEmbedder(BaseEmbedder):
                     output = []
                     for chunk in model_input: 
                         output.append(self.bert_model(chunk.to(device))[0].detach().cpu())
-                    output = torch.cat(output, dim=1).detach().cpu().numpy()
+                    output = torch.cat(output, dim=1).numpy()
                 else:
                     output = self.bert_model(model_input.to(device))[0].detach().cpu().numpy()
                 embedding = output
@@ -325,15 +325,26 @@ class NucleotideTransformerEmbedder(BaseEmbedder):
         model_name : str
             The name of the model to load.
             When providing a name, the model will be loaded from the HuggingFace model hub.
-            Alternatively, you can provide a path to a local model directory.
+            Alternatively, you can provide a path to a local model directory. We check whether the model_name
+            contains 'v2' to determine whether we need to follow the V2 model API or not.
         """
 
         # Get pretrained model
-        self.model = AutoModel.from_pretrained(model_name)
+        if 'v2' in model_name:
+            self.model = AutoModelForMaskedLM.from_pretrained(model_name, trust_remote_code=True)
+            self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+            self.max_seq_len = 12282 # "model_max_length": 2048, --> 12,288
+            self.max_tokens = 2048
+            self.v2 = True
+        else:
+            self.model = AutoModel.from_pretrained(model_name)
+            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+            self.max_seq_len = 5994 # "model_max_length": 1000, 6-mer --> 6000
+            self.max_tokens = 1000
+            self.v2 = False
         self.model.to(device)
         self.model.eval()
 
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
 
     def embed(self, sequences: List[str], disable_tqdm: bool = False, remove_special_tokens: bool = True, upsample_embeddings: bool = False):
         """
@@ -361,16 +372,22 @@ class NucleotideTransformerEmbedder(BaseEmbedder):
         with torch.no_grad():
             for n, s in enumerate(tqdm(sequences, disable=disable_tqdm)):
                 #print('sequence', n)
-                s_chunks = [s[chunk : chunk + 5994] for chunk in  range(0, len(s), 5994)] # split into chunks 
+                s_chunks = [s[chunk : chunk + self.max_seq_len] for chunk in  range(0, len(s), self.max_seq_len)] # split into chunks 
                 embedded_seq = []
                 for n_chunk, chunk in enumerate(s_chunks): # embed each chunk
                     tokens_ids = self.tokenizer(chunk, return_tensors = 'pt')['input_ids'].int().to(device)
-                    if len(tokens_ids[0]) > 1000: # too long to fit into the model
-                        split = torch.split(tokens_ids, 1000, dim=-1)
-                        outs = [self.model(item)['last_hidden_state'].detach().cpu().numpy() for item in split]
+                    if len(tokens_ids[0]) > self.max_tokens: # too long to fit into the model
+                        split = torch.split(tokens_ids, self.max_tokens, dim=-1)
+                        if self.v2:
+                            outs = [self.model(item, output_hidden_states=True)['hidden_states'][-1].detach().cpu().numpy() for item in split]
+                        else:
+                            outs = [self.model(item)['last_hidden_state'].detach().cpu().numpy() for item in split]
                         outs = np.concatenate(outs, axis=1)
                     else:
-                        outs = self.model(tokens_ids)['last_hidden_state'].detach().cpu().numpy() # get last hidden state
+                        if self.v2:
+                            outs = self.model(tokens_ids, output_hidden_states=True)['hidden_states'][-1].detach().cpu().numpy()
+                        else:
+                            outs = self.model(tokens_ids)['last_hidden_state'].detach().cpu().numpy() # get last hidden state
 
                     if upsample_embeddings:
                         outs = self._repeat_embedding_vectors(self.tokenizer.convert_ids_to_tokens(tokens_ids[0]), outs)

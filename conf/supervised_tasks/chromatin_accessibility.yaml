@@ -24,7 +24,9 @@ hydra :
                  dnabert2,
                  onehot,
                  awdlstm,
-                 resnet-supervised
+                 resnet-supervised,
+                 basset-supervised,
+                 nt_transformer_v2_500m
 embedder : onehot
 task : chromatin_accessibility 
 output_dir: ./downstream_tasks/${task}/${embedder}/
@@ -45,12 +47,12 @@ data:
   data_dir : ./data/${task}/${embedder}/
   cross_validation : false
   batch_size : 256
-  num_workers : 0
+  num_workers : 8
   padding_value : -100
   shuffle : 1000
 params:
   epochs: 100
-  load_checkpoint: false
+  load_checkpoint: true
   mode: train
   gradient_accumulation_steps: 1
   criterion: bce

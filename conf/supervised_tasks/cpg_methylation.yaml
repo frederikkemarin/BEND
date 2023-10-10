@@ -24,7 +24,8 @@ hydra :
                  dnabert2,
                  onehot,
                  awdlstm,
-                 resnet-supervised
+                 resnet-supervised,
+                 nt_transformer_v2_500m
 embedder : onehot
 task : cpg_methylation 
 output_dir: ./downstream_tasks/${task}/${embedder}/
