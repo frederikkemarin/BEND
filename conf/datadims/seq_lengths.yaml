@@ -3,4 +3,4 @@ enhancer_annotation: 100096
 variant_effects: 2
 histone_modification_length: 512
 chromatin_accessibility_length: 512
-cpg_methylation: 512
+cpg_methylation_length: 512
