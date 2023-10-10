@@ -240,7 +240,7 @@ class DNABertEmbedder(BaseEmbedder):
                     output = []
                     for chunk in model_input: 
                         output.append(self.bert_model(chunk.to(device))[0].detach().cpu())
-                    output = torch.cat(output, dim=1)
+                    output = torch.cat(output, dim=1).numpy()
                 else:
                     output = self.bert_model(model_input.to(device))[0].detach().cpu().numpy()
                 embedding = output

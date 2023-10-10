@@ -21,7 +21,9 @@ hydra :
                  dnabert2,
                  onehot,
                  awdlstm,
-                 resnet-supervised
+                 resnet-supervised,
+                 basset-supervised,
+                 nt_transformer_v2_500m
                  #hyenadna-small-32k,
                  #hyenadna-medium-160k,
                  #hyenadna-medium-450k,
