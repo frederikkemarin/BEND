@@ -12,6 +12,7 @@ from sklearn.feature_selection import r_regression
 import pandas as pd
 from typing import Union
 import numpy as np
+import glob
 
 class CrossEntropyLoss(nn.Module):
     """
@@ -216,7 +217,11 @@ class BaseTrainer:
     
     def _create_output_dir(self, path):
         os.makedirs(f'{path}/checkpoints/', exist_ok=True)
-        if self.overwrite_dir or not os.path.exists(f'{path}/losses.csv'):
+        # if load checkpoints is false and overwrite dir is true, delete previous checkpoints
+        if self.overwrite_dir and not self.config.params.load_checkpoint:
+            # delete all checkpoints from previous runs
+            [os.remove(f) for f in glob.glob(f'{path}/**', recursive=True) if os.path.isfile(f)]
+        if (self.overwrite_dir and not self.config.params.load_checkpoint) or not os.path.exists(f'{path}/losses.csv'):
             pd.DataFrame(columns = ['Epoch', 'train_loss', 'val_loss', f'val_{self.config.params.metric}']).to_csv(f'{path}/losses.csv', index = False)
         return 
     
@@ -492,6 +497,7 @@ class BaseTrainer:
         metric : float
             The average validation metric.
         """
+        print('TESTING')
         df = pd.read_csv(f'{self.config.output_dir}/losses.csv')
         if checkpoint is None:
             checkpoint = pd.DataFrame(df.iloc[df[f"val_{self.config.params.metric}"].idxmax()]).T.reset_index(drop=True) 
