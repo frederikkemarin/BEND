@@ -280,6 +280,7 @@ class ConvNetForSupervised(nn.Module):
                                     upsample_factor = upsample_factor,
                                     output_downsample_window= output_downsample_window)
         self.softmax =  nn.Softmax(dim = -1)
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, x, activation = 'none', **kwargs):
         """
