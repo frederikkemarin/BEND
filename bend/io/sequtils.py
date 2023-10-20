@@ -115,12 +115,17 @@ def embed_from_bed(bed, reference_fasta, embedder,
                   label_depth=None, split = None, flank = 0):
     fasta = Fasta(reference_fasta)
     f = pd.read_csv(bed, header = 'infer', sep = '\t', low_memory=False)
+    # open hdf5 file 
+    hdf5_file = h5py.File(hdf5_file, mode = "r")['labels'] if hdf5_file else None
     if split: 
-        f = f[f.iloc[:, -1] == split]
+        mask = (f.iloc[:, -1] == split)
+        f = f[mask]
+        if hdf5_file is not None: 
+            hdf5_file = hdf5_file[mask.to_numpy()] # mask the labels
+
     label_column_idx = f.columns.get_loc('label') if 'label' in f.columns else label_column_idx
     strand_column_idx = f.columns.get_loc('strand') if 'strand' in f.columns else 3
-    # open hdf5 file 
-    hdf5_file = h5py.File(hdf5_file, mode = "r") if hdf5_file else None
+    
     
     if chunk is not None:
         # check if chunk is valid 
@@ -141,7 +146,7 @@ def embed_from_bed(bed, reference_fasta, embedder,
         else:
             chrom, start, end, strand = line.iloc[0], int(line.iloc[1]), int(line.iloc[2]), '+' 
         if hdf5_file is not None: 
-            labels = hdf5_file['labels'][n + (chunk*chunk_size)]
+            labels = hdf5_file[n + start_offset]
         else: 
             labels = line.iloc[label_column_idx]
             labels = list(map(int, labels.split(','))) if isinstance(labels, str) else [] # if no label for sample
@@ -154,7 +159,6 @@ def embed_from_bed(bed, reference_fasta, embedder,
             print(f'Embedding length does not match sequence length ({sequence_embed.shape[1]} != {len(sequence)} : {n} {chrom}:{start}-{end}{strand})')
             print(n, chrom, start, end, strand)
             continue
-
         sink.write({
             "__key__": f"sample_{n + start_offset}",
             "input.npy": sequence_embed,
