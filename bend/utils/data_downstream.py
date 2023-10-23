@@ -101,6 +101,8 @@ def return_dataloader(data : Union[str, list],
     if isinstance(data, str):
         data = [data]
     dataset = wds.WebDataset(data)
+    if shuffle is not None:
+        dataset = dataset.shuffle(shuffle)
     dataset = dataset.decode() # iterator over samples - each sample is dict with keys "input.npy" and "output.npy"
     dataset = dataset.to_tuple("input.npy", "output.npy")
     dataset = dataset.map_tuple(torch.from_numpy, torch.from_numpy) # TODO any specific dtype requirements or all handled already?
