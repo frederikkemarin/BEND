@@ -273,6 +273,7 @@ class BaseTrainer:
         Returns:
             metric (str): the metric value [mcc, auroc, pearsonr, auprc]
         '''
+        
         # check if any padding in the target
         if torch.any(y_true  == self.config.data.padding_value):
             mask = y_true != self.config.data.padding_value
@@ -469,9 +470,13 @@ class BaseTrainer:
 
         loss /= (idx + 1) 
         # compute metrics
-        metric = self._calculate_metric(torch.cat(targets_all), 
-                                          torch.cat(outputs))
-        
+        # save targets and outputs 
+        try:
+            metric = self._calculate_metric(torch.cat(targets_all), 
+                                              torch.cat(outputs))
+        except:
+            metric = self._calculate_metric(torch.cat([i.flatten() for i in targets_all]), 
+                                              torch.cat([i.flatten() for i in outputs]))
         return loss, metric
 
     def test(self, test_loader, checkpoint = None, overwrite=False):
