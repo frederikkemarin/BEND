@@ -43,9 +43,9 @@ data:
   _target_: bend.utils.data_downstream.get_data
   cross_validation : false
   batch_size : 64
-  num_workers : 0
+  num_workers : 32
   padding_value : -100
-  shuffle : 1000
+  shuffle : 200
   parent_dir : ./data
   data_dir : ${data.parent_dir}/${task}/${embedder}/
 params:

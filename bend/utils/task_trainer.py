@@ -13,6 +13,7 @@ import pandas as pd
 from typing import Union
 import numpy as np
 import glob
+import pandas as pd
 
 class CrossEntropyLoss(nn.Module):
     """
@@ -349,10 +350,21 @@ class BaseTrainer:
         """
         from tqdm.auto import tqdm
         self.model.train()
+        
         train_loss = 0
+        #with torch.profiler.profile(schedule=torch.profiler.schedule(wait=10, warmup=2, active=10, repeat=1),
+        #                            profile_memory=True,with_stack=True, 
+        #                            record_shapes=True,
+        #                            on_trace_ready=torch.profiler.tensorboard_trace_handler('./log/fullwds')) as prof:
+        
         for idx, batch in tqdm(enumerate(train_loader)):
+            #with torch.profiler.record_function('h2d copy'):
             train_loss += self.train_step(batch, idx = idx)
+            #prof.step()
+        
+        #print(prof.key_averages().table(sort_by="self_cpu_time_total"))
         train_loss /= (idx +1)
+        
         return train_loss
     
 
@@ -424,17 +436,17 @@ class BaseTrainer:
         
         data, target = batch
         with torch.autocast(device_type='cuda', dtype=torch.float16):
-            output = self.model(x = data.to(self.device), length = target.shape[-1], 
+            output = self.model(x = data.to(self.device, non_blocking=True), length = target.shape[-1], 
                                 activation = self.config.params.activation) 
     
-            loss = self.criterion(output, target.to(self.device).long())
+            loss = self.criterion(output, target.to(self.device, non_blocking=True).long())
             loss = loss / self.gradient_accumulation_steps
-        # Accumulates scaled gradients.
-        self.scaler.scale(loss).backward()
-        if ((idx + 1) % self.gradient_accumulation_steps == 0) : #or (idx + 1 == len_dataloader):
-            self.scaler.step(self.optimizer)
-            self.scaler.update()
-            self.optimizer.zero_grad(set_to_none = True)
+            # Accumulates scaled gradients.
+            self.scaler.scale(loss).backward()
+            if ((idx + 1) % self.gradient_accumulation_steps == 0) : #or (idx + 1 == len_dataloader):
+                self.scaler.step(self.optimizer)
+                self.scaler.update()
+                self.optimizer.zero_grad(set_to_none = True)
             
         return loss.item()
 

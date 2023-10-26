@@ -11,6 +11,7 @@ import wandb
 from bend.models.downstream import CustomDataParallel
 import os
 import sys
+os.environ["WDS_VERBOSE_CACHE"] = "1"
 
 # load config 
 @hydra.main(config_path=f"../conf/supervised_tasks/", config_name=None ,version_base=None) #
@@ -48,7 +49,6 @@ def run_experiment(cfg: DictConfig) -> None:
         with open_dict(cfg):
             cfg.model.update(cfg.supervised_encoder[cfg.embedder])
     model = hydra.utils.instantiate(cfg.model).to(device).float()
-    print(cfg.model)
     # put model on dataparallel
     if torch.cuda.device_count() > 1:
         from bend.models.downstream import CustomDataParallel
@@ -78,10 +78,11 @@ def run_experiment(cfg: DictConfig) -> None:
     trainer = BaseTrainer(model = model, optimizer = optimizer, criterion = criterion, 
                         device = device, config = cfg, overwrite_dir = True)
     
+
     if cfg.params.mode == 'train':
         # train     
         trainer.train(train_loader, val_loader, cfg.params.epochs, cfg.params.load_checkpoint)
-
+    
     # test 
     trainer.test(test_loader, overwrite=False)
 
