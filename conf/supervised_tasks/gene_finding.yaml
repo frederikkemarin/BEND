@@ -45,7 +45,7 @@ data:
   batch_size : 64
   num_workers : 32
   padding_value : -100
-  shuffle : 200
+  shuffle : 1000
   parent_dir : ./data
   data_dir : ${data.parent_dir}/${task}/${embedder}/
 params:
