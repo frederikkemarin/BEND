@@ -220,10 +220,14 @@ class BaseTrainer:
         os.makedirs(f'{path}/checkpoints/', exist_ok=True)
         # if load checkpoints is false and overwrite dir is true, delete previous checkpoints
         if self.overwrite_dir and not self.config.params.load_checkpoint:
+            print('Deleting all previous checkpoints')
+            print(self.overwrite_dir)
+            print(self.config.params.load_checkpoint)
             # delete all checkpoints from previous runs
             [os.remove(f) for f in glob.glob(f'{path}/**', recursive=True) if os.path.isfile(f)]
-        if (self.overwrite_dir and not self.config.params.load_checkpoint) or not os.path.exists(f'{path}/losses.csv'):
             pd.DataFrame(columns = ['Epoch', 'train_loss', 'val_loss', f'val_{self.config.params.metric}']).to_csv(f'{path}/losses.csv', index = False)
+        #if (self.overwrite_dir and not self.config.params.load_checkpoint) or not os.path.exists(f'{path}/losses.csv'):
+            
         return 
     
     def _load_checkpoint(self, checkpoint):
@@ -302,7 +306,7 @@ class BaseTrainer:
     
 
     def _get_checkpoint_path(self, 
-                             load_checkpoint : Union[bool, int] = True):
+                             load_checkpoint : Union[bool, int, str] = True):
         '''
         Gets the path of the checkpoint to load
         Args:
@@ -314,7 +318,8 @@ class BaseTrainer:
         if not load_checkpoint:
             print("Not looking for existing checkpoints, starting from scratch.")
             return
-
+        if isinstance(load_checkpoint, str):
+            return load_checkpoint
         checkpoints = [f for f in os.listdir(f'{self.config.output_dir}/checkpoints/') if f.endswith('.pt')]
         checkpoints = sorted(checkpoints, key=lambda x: int(x.split('_')[1].split('.')[0]))
         if len(checkpoints) == 0:
@@ -473,11 +478,13 @@ class BaseTrainer:
         with torch.no_grad():
             for idx, (data, target) in enumerate(data_loader):
                 output = self.model(data.to(self.device), activation = self.config.params.activation)
-                if  self.config.params.criterion == 'bce': #self.config.task in ['chromatin_accessibility', 'histone_modification', 'enhancer_annotation']:
+                loss += self.criterion(output, target.to(self.device).long()).item()
+
+                if  self.config.params.criterion == 'bce': 
                     outputs.append(self.model.sigmoid(output).detach().cpu())
                 else: 
                     outputs.append(torch.argmax(self.model.softmax(output), dim=-1).detach().cpu()) 
-                loss += self.criterion(output, target.to(self.device).long()).item()
+                
                 targets_all.append(target.detach().cpu())  
 
         loss /= (idx + 1) 
@@ -513,9 +520,10 @@ class BaseTrainer:
             The average validation metric.
         """
         print('TESTING')
-        df = pd.read_csv(f'{self.config.output_dir}/losses.csv')
         if checkpoint is None:
+            df = pd.read_csv(f'{self.config.output_dir}/losses.csv')
             checkpoint = pd.DataFrame(df.iloc[df[f"val_{self.config.params.metric}"].idxmax()]).T.reset_index(drop=True) 
+        
         # load checkpoint
         print(f'{self.config.output_dir}/checkpoints/epoch_{int(checkpoint["Epoch"].iloc[0])}.pt')
         epoch, train_loss, val_loss, val_metric = self._load_checkpoint(f'{self.config.output_dir}/checkpoints/epoch_{int(checkpoint["Epoch"].iloc[0])}.pt')
