@@ -1,9 +1,5 @@
 # 🧬 BEND  - **Ben**chmarking **D**NA Language Models on Biologically Meaningful Tasks
 
-![Stars](https://img.shields.io/github/stars/frederikkemarin/BEND?logo=GitHub&color=yellow)
-[![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
-[![Documentation Status](https://readthedocs.org/projects/bend/badge/?version=latest)](https://bend.readthedocs.io/en/latest/?badge=latest)
-
 ## Documentation
 Documentation is available but the link is hidden for the purpose of anonymity.
 
