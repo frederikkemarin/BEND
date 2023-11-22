@@ -11,6 +11,8 @@
 
 All data is available for download [here](https://sid.erda.dk/cgi-sid/ls.py?share_id=aNQa0Oz2lY)
 
+The data can be downloaded via a script, see [section 2.5](#2-setup)
+
 ## Tutorial
 
 ### 1. Data format
@@ -32,6 +34,7 @@ We recommend installing BEND in a conda environment with Python 3.10.
 2. Change to the BEND directory: `cd BEND`
 3. Install the requirements: `pip install -r requirements.txt`
 4. Install BEND in development mode: `pip install -e .`
+5. Download the data: `python scripts/download_bend.py`
 
 ### 3. Computing embeddings
 
