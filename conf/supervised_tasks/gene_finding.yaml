@@ -54,7 +54,7 @@ params:
   mode: train
   gradient_accumulation_steps: 1
   criterion: cross_entropy
-  class_weights: null
+  class_weights: null #[6.37, 1485.62, 1.52, 1485.62, 6.11, 1438.04, 1.52, 1438.04, 1.0]
   metric : mcc
   activation : none
 wandb:
