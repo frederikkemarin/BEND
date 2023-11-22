@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import wandb
 import os
-from sklearn.metrics import matthews_corrcoef, roc_auc_score, average_precision_score
+from sklearn.metrics import matthews_corrcoef, roc_auc_score, recall_score, precision_score, average_precision_score, confusion_matrix
 from sklearn.feature_selection import r_regression
 import pandas as pd
 from typing import Union
@@ -226,13 +226,15 @@ class BaseTrainer:
             # delete all checkpoints from previous runs
             [os.remove(f) for f in glob.glob(f'{path}/**', recursive=True) if os.path.isfile(f)]
             pd.DataFrame(columns = ['Epoch', 'train_loss', 'val_loss', f'val_{self.config.params.metric}']).to_csv(f'{path}/losses.csv', index = False)
-        #if (self.overwrite_dir and not self.config.params.load_checkpoint) or not os.path.exists(f'{path}/losses.csv'):
             
         return 
     
     def _load_checkpoint(self, checkpoint):
         checkpoint = torch.load(checkpoint,  map_location=self.device)
-        self.model.load_state_dict(checkpoint['model_state_dict'], strict=False)
+        try:
+            self.model.load_state_dict(checkpoint['model_state_dict'], strict=True)
+        except:
+            self.model.module.load_state_dict(checkpoint['model_state_dict'], strict=True)
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         epoch = checkpoint['epoch']
         train_loss = checkpoint['train_loss']
@@ -287,11 +289,15 @@ class BaseTrainer:
 
         if self.config.params.metric == 'mcc':
             metric =  matthews_corrcoef(y_true.numpy().ravel(), y_pred.numpy().ravel())
-    
+            recall = recall_score(y_true.numpy().ravel(), y_pred.numpy().ravel(), average=None).tolist()
+            precision = precision_score(y_true.numpy().ravel(), y_pred.numpy().ravel(), average=None).tolist()
+            #tp = confusion_matrix(y_true.numpy().ravel(), y_pred.numpy().ravel(), normalize='true').diagonal().tolist()
+            metric = [metric] + recall + precision #[list(i) for i in zip(recall, precision)]
         elif self.config.params.metric == 'auroc':
             if self.config.task == 'histone_modification' or self.config.task == 'chromatin_accessibility':
                 # save y_true and y_pred 
                 metric = roc_auc_score(y_true.numpy(), y_pred.numpy(), average = None)
+                metric = [metric.mean()] + metric.tolist()
             else:
                 metric = roc_auc_score(y_true.numpy().ravel(), y_pred.numpy().ravel(), average = 'macro') # flatten arrays to get pearsons r
             
@@ -377,6 +383,7 @@ class BaseTrainer:
     def train(self, 
               train_loader, 
               val_loader, 
+              test_loader,
               epochs, 
               load_checkpoint: Union[bool, int] = True):
         """
@@ -411,6 +418,8 @@ class BaseTrainer:
             train_loss = self.train_epoch(train_loader)
             val_loss, val_metric = self.validate(val_loader)
             val_metric = np.mean(val_metric)
+            #test_loss, test_metric = self.test(test_loader, overwrite=False)
+            #print('TEST:', test_loss, test_metric, checkpoint = epoch)
             # save epoch in output dir
             self._save_checkpoint(epoch, train_loss, val_loss, val_metric)
             # log losses to csv
@@ -523,24 +532,29 @@ class BaseTrainer:
         if checkpoint is None:
             df = pd.read_csv(f'{self.config.output_dir}/losses.csv')
             checkpoint = pd.DataFrame(df.iloc[df[f"val_{self.config.params.metric}"].idxmax()]).T.reset_index(drop=True) 
-        
+        #print('before load checkpoint', )
+        #print(self.model.state_dict()['conv2.1.bias'])
         # load checkpoint
         print(f'{self.config.output_dir}/checkpoints/epoch_{int(checkpoint["Epoch"].iloc[0])}.pt')
         epoch, train_loss, val_loss, val_metric = self._load_checkpoint(f'{self.config.output_dir}/checkpoints/epoch_{int(checkpoint["Epoch"].iloc[0])}.pt')
         print(f'Loaded checkpoint from epoch {epoch}, train loss: {train_loss:.3f}, val loss: {val_loss:.3f}, Val {self.config.params.metric}: {np.mean(val_metric):.3f}')
-
+        #print('before test', )
+        #print(self.model.state_dict()['conv2.1.bias'])
         # test
         loss, metric = self.validate(test_loader)
+        #print('after test', )
+        #print(self.model.state_dict()['conv2.1.bias'])
+        print(f'Test results : Loss {loss:.4f}, {self.config.params.metric} {metric[0]:.4f}')
         
-        print(f'Test results : Loss {loss:.4f}, {self.config.params.metric} {np.mean(metric):.4f}')
-        
-        if isinstance(metric, np.ndarray):
-            columns = ['test_loss', f'test_{self.config.params.metric}_avg'] +[f'test_{self.config.params.metric}_{n}' for n in range(len(metric))]
-            data = [[loss, np.mean(metric)] + list(metric)]
+        if isinstance(metric, (np.ndarray, list)):
+            data = [[loss] + list(metric)]
+            if self.config.params.metric == 'mcc':
+                columns = ['test_loss', f'test_{self.config.params.metric}'] +[f'test_recall_{n}' for n in range(int((len(metric)-1)/2))] + [f'test_precision_{n}' for n in range(int((len(metric)-1)/2))]
+            else: 
+                columns = ['test_loss', f'test_{self.config.params.metric}_avg'] +[f'test_{self.config.params.metric}_{n}' for n in range(len(metric))]
         else:
             columns = ['test_loss', f'test_{self.config.params.metric}']
             data = [[loss, metric]]
-            
         metrics = checkpoint.merge(pd.DataFrame(data = data, columns = columns), how = 'cross')
 
         if not overwrite and os.path.exists(f'{self.config.output_dir}/best_model_metrics.csv'):
@@ -549,7 +563,7 @@ class BaseTrainer:
             metrics = pd.concat([best_model_metrics, metrics], ignore_index=True)
 
         # save metrics to best model metrics
-        metrics = metrics.drop_duplicates().reset_index(drop=True)
+        #metrics = metrics.drop_duplicates().reset_index(drop=True)
         metrics.to_csv(f'{self.config.output_dir}/best_model_metrics.csv', index = False)
         return loss, metric 
     

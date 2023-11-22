@@ -81,7 +81,7 @@ def run_experiment(cfg: DictConfig) -> None:
 
     if cfg.params.mode == 'train':
         # train     
-        trainer.train(train_loader, val_loader, cfg.params.epochs, cfg.params.load_checkpoint)
+        trainer.train(train_loader, val_loader, test_loader, cfg.params.epochs, cfg.params.load_checkpoint)
     
     # test 
     trainer.test(test_loader, overwrite=False)
