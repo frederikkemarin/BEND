@@ -8,7 +8,7 @@ link = 'https://sid.erda.dk/cgi-sid/ls.py?share_id=f6hdp1zTzh&current_dir=.&flag
 
 def get_soup(link):
     source_code = requests.get(link)
-    soup = BeautifulSoup(source_code.content, 'html')
+    soup = BeautifulSoup(source_code.content,"lxml")
     f = []
     f.extend(soup.find_all('a', {'class' : ['leftpad directoryicon', ]}))
     f.extend(soup.find_all('a', {'title' : 'open'}))
@@ -22,6 +22,7 @@ def download_file(link, destination):
 
 
 
+
 def rec(link, destination = './'):
     f = get_soup(link)
     for child in f:
@@ -29,7 +30,11 @@ def rec(link, destination = './'):
             link = f'{base_link}{child.get("href")}'
             child_path = child.get("href")[27:]
             os.makedirs(f'{destination}/{os.path.dirname(child_path)}', exist_ok=True)
+            print(f'{destination}/{child_path}')
             download_file(link, f'{destination}/{child_path}')
         else:
             link = f'{base_link}cgi-sid/{child.get("href")}'
             rec(link, destination)
+
+print('DOWNLOADING')
+rec(link, destination = '.')
