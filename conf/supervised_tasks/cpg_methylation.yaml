@@ -52,7 +52,7 @@ data:
   shuffle : 200
 params:
   epochs: 100
-  load_checkpoint: true
+  load_checkpoint: false
   mode: train
   gradient_accumulation_steps: 1
   criterion: bce
