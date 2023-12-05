@@ -26,7 +26,8 @@ hydra :
                  awdlstm,
                  resnet-supervised,
                  basset-supervised,
-                 nt_transformer_v2_500m
+                 nt_transformer_v2_500m,
+                 grover
 embedder : onehot
 task : chromatin_accessibility 
 output_dir: ./downstream_tasks/${task}/${embedder}/

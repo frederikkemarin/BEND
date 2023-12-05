@@ -23,7 +23,8 @@ hydra :
                  awdlstm,
                  resnet-supervised,
                  basset-supervised,
-                 nt_transformer_v2_500m
+                 nt_transformer_v2_500m,
+                 grover
                  #hyenadna-small-32k,
                  #hyenadna-medium-160k,
                  #hyenadna-medium-450k,

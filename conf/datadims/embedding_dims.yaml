@@ -19,3 +19,4 @@ hyenadna-small-32k : 256
 hyenadna-medium-160k : 256
 hyenadna-medium-450k : 256
 nt_transformer_v2_500m: 1024
+grover: 768
