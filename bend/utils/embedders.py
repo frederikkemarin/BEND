@@ -951,6 +951,8 @@ class GROVEREmbedder(BaseEmbedder):
 
         self.max_length = 510 # NOTE this is BPE tokens, not bp.
 
+        self.max_token_length = max([len(token) for token in self.tokenizer.vocab.keys()])
+
 
     def max_match_tokenize(self, sequence: str) -> List[str]:
         """
@@ -973,7 +975,8 @@ class GROVEREmbedder(BaseEmbedder):
         i = 0
         while i < len(sequence):
             max_token = None
-            for j in range(len(sequence), i, -1):
+            for j in range(i + self.max_token_length, i, -1):
+            # for j in range(len(sequence), i, -1):
                 candidate = sequence[i:j]
                 if candidate in self.tokenizer.vocab:
                     max_token = candidate
