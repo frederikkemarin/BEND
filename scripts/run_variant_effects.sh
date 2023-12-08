@@ -21,8 +21,9 @@ python3 scripts/predict_variant_effects.py $VARIANT_FILE $OUT_DIR/${OUT_PREFIX}_
 python3 scripts/predict_variant_effects.py $VARIANT_FILE $OUT_DIR/${OUT_PREFIX}_genalm_bert_large_t2t.csv genalm AIRI-Institute/gena-lm-bert-large-t2t ../GRCh38.primary_assembly.genome.fa --embedding_idx 256
 python3 scripts/predict_variant_effects.py $VARIANT_FILE $OUT_DIR/${OUT_PREFIX}_genalm_bigbird_base_t2t.csv genalm AIRI-Institute/gena-lm-bigbird-base-t2t ../GRCh38.primary_assembly.genome.fa --embedding_idx 256
 python3 scripts/predict_variant_effects.py $VARIANT_FILE $OUT_DIR/${OUT_PREFIX}_convnet.csv convnet pretrained_models/convnet data/genomes/GRCh38.primary_assembly.genome.fa --embedding_idx 256
-python3 scripts/predict_variant_effects.py $VARIANT_FILE $OUT_DIR/${OUT_PREFIX}_awd_lstm.csv convnet pretrained_models/awd_lstm data/genomes/GRCh38.primary_assembly.genome.fa --embedding_idx 511 --extra_context 512 #autoreregressive
+python3 scripts/predict_variant_effects.py $VARIANT_FILE $OUT_DIR/${OUT_PREFIX}_awd_lstm.csv awdlstm pretrained_models/awd_lstm data/genomes/GRCh38.primary_assembly.genome.fa --embedding_idx 511 --extra_context 512 #autoreregressive
 python3 scripts/predict_variant_effects.py $VARIANT_FILE $OUT_DIR/${OUT_PREFIX}_nt_v2_500m.csv nt InstaDeepAI/nucleotide-transformer-v2-500m-multi-species data/genomes/GRCh38.primary_assembly.genome.fa --embedding_idx 42
+python3 scripts/predict_variant_effects.py $VARIANT_FILE $OUT_DIR/${OUT_PREFIX}_grover.csv grover pretrained_models/grover data/genomes/GRCh38.primary_assembly.genome.fa --embedding_idx 256
 
 
 # Run disease variants.
@@ -45,5 +46,6 @@ python3 scripts/predict_variant_effects.py $VARIANT_FILE $OUT_DIR/${OUT_PREFIX}_
 python3 scripts/predict_variant_effects.py $VARIANT_FILE $OUT_DIR/${OUT_PREFIX}_genalm_bert_large_t2t.csv genalm AIRI-Institute/gena-lm-bert-large-t2t ../GRCh38.primary_assembly.genome.fa --embedding_idx 256
 python3 scripts/predict_variant_effects.py $VARIANT_FILE $OUT_DIR/${OUT_PREFIX}_genalm_bigbird_base_t2t.csv genalm AIRI-Institute/gena-lm-bigbird-base-t2t ../GRCh38.primary_assembly.genome.fa --embedding_idx 256
 python3 scripts/predict_variant_effects.py $VARIANT_FILE $OUT_DIR/${OUT_PREFIX}_convnet.csv convnet pretrained_models/convnet data/genomes/GRCh38.primary_assembly.genome.fa --embedding_idx 256
-python3 scripts/predict_variant_effects.py $VARIANT_FILE $OUT_DIR/${OUT_PREFIX}_awd_lstm.csv convnet pretrained_models/awd_lstm data/genomes/GRCh38.primary_assembly.genome.fa --embedding_idx 511 --extra_context 512 #autoreregressive
+python3 scripts/predict_variant_effects.py $VARIANT_FILE $OUT_DIR/${OUT_PREFIX}_awd_lstm.csv awdlstm pretrained_models/awd_lstm data/genomes/GRCh38.primary_assembly.genome.fa --embedding_idx 511 --extra_context 512 #autoreregressive
 python3 scripts/predict_variant_effects.py $VARIANT_FILE $OUT_DIR/${OUT_PREFIX}_nt_v2_500m.csv nt InstaDeepAI/nucleotide-transformer-v2-500m-multi-species data/genomes/GRCh38.primary_assembly.genome.fa --embedding_idx 42
+python3 scripts/predict_variant_effects.py $VARIANT_FILE $OUT_DIR/${OUT_PREFIX}_grover.csv grover pretrained_models/grover data/genomes/GRCh38.primary_assembly.genome.fa --embedding_idx 256
