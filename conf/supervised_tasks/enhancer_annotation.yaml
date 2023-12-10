@@ -44,14 +44,14 @@ optimizer :
 data:
   _target_: bend.utils.data_downstream.get_data
   batch_size : 8
-  num_workers : 32
+  num_workers : 2
   padding_value : -100
   shuffle : 100
   parent_dir: ./data/
   data_dir : ${data.parent_dir}/${task}/${embedder}/
-  cross_validation : 1 # which split to run in the cross validation
+  cross_validation : 0 # which split to run in the cross validation
 params:
-  epochs: 80
+  epochs: 100
   load_checkpoint: false
   mode: train
   gradient_accumulation_steps: 1
