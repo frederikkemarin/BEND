@@ -554,7 +554,8 @@ class BaseTrainer:
             if self.config.params.metric == 'mcc':
                 columns = ['test_loss', f'test_{self.config.params.metric}'] +[f'test_recall_{n}' for n in range(int((len(metric)-1)/2))] + [f'test_precision_{n}' for n in range(int((len(metric)-1)/2))]
             else: 
-                columns = ['test_loss', f'test_{self.config.params.metric}_avg'] +[f'test_{self.config.params.metric}_{n}' for n in range(len(metric))]
+                # assumes metric[0] (the stopping metric) is the average of the other metrics
+                columns = ['test_loss', f'test_{self.config.params.metric}_avg'] +[f'test_{self.config.params.metric}_{n}' for n in range(len(metric)-1)]
         else:
             columns = ['test_loss', f'test_{self.config.params.metric}']
             data = [[loss, metric[0]]]
