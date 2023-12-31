@@ -32,6 +32,7 @@ def main():
     # get the embedder
     if args.model == 'nt':
          embedder = embedders.NucleotideTransformerEmbedder(args.checkpoint)
+         kwargs['upsample_embeddings'] = True # each nucleotide has an embedding
     elif args.model == 'dnabert':
         embedder = embedders.DNABertEmbedder(args.checkpoint, kmer = args.kmer)
     elif args.model == 'awdlstm':
