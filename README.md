@@ -74,6 +74,7 @@ Embedders have a default-true argument `remove_special_tokens=True` in `embed()`
 |GENALMEmbedder | [Fishman et al.](https://www.biorxiv.org/content/10.1101/2023.06.12.544594v1) |[8 different models available](https://huggingface.co/AIRI-Institute) | |
 |HyenaDNAEmbedder | [Nguyen et al.](https://arxiv.org/abs/2306.15794) | [5 different models available](https://huggingface.co/LongSafari) | Experimental integration. Requires Git LFS to be installed to automatically download checkpoints. Instead of the HF checkpoint name, the argument when instantiating needs to be of the format `path/to/save/checkpoints/checkpoint_name` |
 |DNABert2Embedder | [Zhou et al.](https://arxiv.org/pdf/2306.15006v1.pdf) | [1 model available](https://huggingface.co/zhihan1996/DNABERT-2-117M) | |
+|GROVEREmbedder | [Sanabria et al.](https://www.biorxiv.org/content/10.1101/2023.07.19.549677v2) | [1 model available](https://zenodo.org/records/8373117) | The original BPE tokenizer is not available, so we apply MaxMatch for segmentation of the input sequence into tokens.|
 
 All embedders can be used as follows:
 ```python
@@ -120,6 +121,7 @@ The full list of current task names are :
 - `variant_effects`
 - `histone_modification`
 - `chromatin_accessibility`
+- `cpg_methylation`
 
 And the list of available embedders/models used for training on the tasks are : 
 
@@ -138,6 +140,7 @@ And the list of available embedders/models used for training on the tasks are :
 - `hyenadna-tiny-1k`
 - `hyenadna-small-32k`
 - `hyenadna-medium-160k`
+- `grover`
 
 
 The `train_on_task.py` script calls a trainer class `bend.utils.task_trainer`. All configurations required to adapt these 2 scripts to train on a specific task (input data, downstream model, parameters, evaluation metric etc.) are specified in the task specific [hydra](https://hydra.cc/docs/intro/) config files stored in the [conf](../conf/) directory. This minimizes the changes required to the scripts in order to introduce a potential new task. 
@@ -314,7 +317,7 @@ In case the variant consequences categories are used, [Ensembl VEP](https://geno
     doi = {10.1093/nar/gkz972},
     url = {https://doi.org/10.1093/nar/gkz972},
     eprint = {https://academic.oup.com/nar/article-pdf/48/D1/D835/31698033/gkz972.pdf},
-}
+    }
 
 
 

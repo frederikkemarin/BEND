@@ -26,7 +26,8 @@ hydra :
                  awdlstm,
                  resnet-supervised,
                  basset-supervised,
-                 nt_transformer_v2_500m
+                 nt_transformer_v2_500m,
+                 grover
 embedder : onehot
 task : chromatin_accessibility 
 output_dir: ./downstream_tasks/${task}/${embedder}/
@@ -52,7 +53,7 @@ data:
   shuffle : 1000
 params:
   epochs: 100
-  load_checkpoint: true
+  load_checkpoint: false
   mode: train
   gradient_accumulation_steps: 1
   criterion: bce

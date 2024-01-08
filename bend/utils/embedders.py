@@ -27,7 +27,7 @@ from bend.models.dilated_cnn import ConvNetModel
 from bend.models.gena_lm import BertModel as GenaLMBertModel
 from bend.models.hyena_dna import HyenaDNAPreTrainedModel, CharacterTokenizer
 from bend.models.dnabert2 import BertModel as DNABert2BertModel
-from bend.utils.download import download_model
+from bend.utils.download import download_model, download_model_zenodo
 
 from tqdm.auto import tqdm
 from transformers import logging, BertModel, BertConfig, BertTokenizer, AutoModel, AutoTokenizer, BigBirdModel, AutoModelForMaskedLM
@@ -896,6 +896,172 @@ class DNABert2Embedder(BaseEmbedder):
     
     
 
+    # GATTTATTAGGGGAGATTTTATATATCCCGA
+    # ['[CLS]', 'G', 'ATTTATT', 'AGGGG', 'AGATT', 'TTATAT', 'ATCCCG', 'A', '[SEP]']
+    @staticmethod
+    def _repeat_embedding_vectors(tokens: Iterable[str], embeddings: np.ndarray, has_special_tokens: bool = True):
+        '''
+        Byte-pair encoding merges a variable number of letters into one token.
+        We need to repeat each token's embedding vector for each letter in the token.
+        '''
+        assert len(tokens) == embeddings.shape[1], 'Number of tokens and embeddings must match.'
+        new_embeddings = []
+        for idx, token in enumerate(tokens):
+
+            if has_special_tokens and (idx == 0 or idx == len(tokens) - 1):
+                new_embeddings.append(embeddings[:, [idx]]) # (1, 768)
+                continue
+            token_embedding = embeddings[:, [idx]] # (1, 768)
+            if token == '[UNK]':
+                new_embeddings.extend([token_embedding])
+            else:
+                new_embeddings.extend([token_embedding] * len(token))
+
+        # list of (1,1, 768) arrays
+        new_embeddings = np.concatenate(new_embeddings, axis=1)
+        return new_embeddings
+
+
+class GROVEREmbedder(BaseEmbedder):
+    '''Embed using the GROVER model https://www.biorxiv.org/content/10.1101/2023.07.19.549677v2'''
+
+    def load_model(self, model_path: str = "pretrained_models/grover" , **kwargs):
+        """Load the GROVER model.
+
+        Parameters
+        ----------
+        model_path : str
+            The path to the model directory.
+            If the model path does not exist, it will be downloaded from https://zenodo.org/records/8373117
+        """
+        # download model if not exists
+        if not os.path.exists(model_path):
+            print(f'Path {model_path} does not exists, model is downloaded from https://zenodo.org/records/8373117')
+            download_model_zenodo(
+                base_url = 'https://zenodo.org/records/8373117',
+                destination_dir = model_path
+                )
+
+
+        self.model = BertModel.from_pretrained(model_path)
+        self.tokenizer = BertTokenizer.from_pretrained(model_path, do_lower_case=False)
+
+        self.model.to(device)
+        self.model.eval()
+
+        self.max_length = 510 # NOTE this is BPE tokens, not bp.
+
+        self.max_token_length = max([len(token) for token in self.tokenizer.vocab.keys()])
+
+
+    def max_match_tokenize(self, sequence: str) -> List[str]:
+        """
+        Tokenize a sequence using max match. 
+        We have to do this as we do not have access to the BPE tokenizer used by GROVER.
+        We only have access to the vocabulary, so we find a sequence-to-token assignment
+        that uses the longest possible tokens.
+
+        Parameters
+        ----------
+        sequence : str
+            The sequence to tokenize.
+
+        Returns
+        -------
+        List[str]
+            The tokenized sequence.
+        """
+        tokens = []
+        i = 0
+        while i < len(sequence):
+            max_token = None
+            for j in range(i + self.max_token_length, i, -1):
+            # for j in range(len(sequence), i, -1):
+                candidate = sequence[i:j]
+                if candidate in self.tokenizer.vocab:
+                    max_token = candidate
+                    break
+            if max_token is None:
+                # If a subsequence cannot be tokenized, add each individual character as an unknown token
+                tokens.extend([self.tokenizer.unk_token for _ in sequence[i]])
+                i += 1
+            else:
+                tokens.append(max_token)
+                i += len(max_token)
+        return tokens
+
+
+    def embed(self, sequences: List[str], disable_tqdm: bool = False, remove_special_tokens: bool = True, upsample_embeddings: bool = False):
+        '''Embeds a list sequences using the GROVER model.
+        Note that the BPE tokenizer that GROVER used is not provided, we only
+        have access to the vocabulary used for tokenization. Instead,
+        we use max match to tokenize the sequence, so that each subsequence gets
+        tokenized as its longest token in the vocabulary. Not certain that this is 
+        identical to what a correctly instantiated BPE tokenizer would do.
+
+        Parameters
+        ----------
+        sequences : List[str]
+            List of sequences to embed.
+        disable_tqdm : bool, optional
+            Whether to disable the tqdm progress bar. Defaults to False.
+        remove_special_tokens : bool, optional
+            Whether to remove the CLS and SEP tokens from the embeddings. Defaults to True.
+        upsample_embeddings : bool, optional
+            Whether to upsample the embeddings to match the length of the input sequences. Defaults to False.
+
+        Returns
+        -------
+        embeddings : List[np.ndarray]
+            List of embeddings.
+        '''
+        # '''
+        # Note that this model uses byte pair encoding.
+        # upsample_embedding repeats BPE token embeddings so that each nucleotide has its own embedding.
+        # The [CLS] and [SEP] tokens are removed from the output if remove_special_tokens is True.
+        # '''
+        embeddings = []
+        with torch.no_grad():
+            for sequence in tqdm(sequences, disable=disable_tqdm):
+
+                # pre-tokenize to BPE words
+                sequence_toks = self.max_match_tokenize(sequence)
+                chunks = [sequence_toks[chunk : chunk + self.max_length] for chunk in  range(0, len(sequence_toks), self.max_length)] # split bpe tokens into chunks
+                embedded_chunks = []
+                for n_chunk, chunk in enumerate(chunks):
+
+                    input_ids = self.tokenizer(' '.join(chunk), return_tensors="pt", return_attention_mask=False, return_token_type_ids=False)["input_ids"]
+                    output = self.model(input_ids.to(device))[0].detach().cpu().numpy()
+
+                    if upsample_embeddings:
+                        output = self._repeat_embedding_vectors(self.tokenizer.convert_ids_to_tokens(input_ids[0]), output)
+
+                    # for intermediate chunks the special tokens need to go.
+                    # if we only have 1 chunk, keep them for now.
+                    if len(chunks) != 1:
+                        if n_chunk == 0:
+                            output = output[:,:-1] # no SEP
+                        elif n_chunk == len(chunks) - 1:
+                            output = output[:,1:] # no CLS
+                        else:
+                            output = output[:,1:-1] # no CLS and no SEP
+
+                    embedded_chunks.append(output)
+
+                embedding = np.concatenate(embedded_chunks, axis=1)
+
+                if remove_special_tokens:
+                    embedding = embedding[:,1:-1]
+
+                if upsample_embeddings and remove_special_tokens:
+                    assert len(sequence) == embedding.shape[1], f'Number of tokens and embeddings must match. {len(sequence)} != {embedding.shape[1]}'
+                elif upsample_embeddings:
+                    assert len(sequence)+ 2 == embedding.shape[1], f'Number of tokens and embeddings must match. {len(sequence)+ 2} != {embedding.shape[1]}'
+
+                embeddings.append(embedding)
+
+        return embeddings
+    
     # GATTTATTAGGGGAGATTTTATATATCCCGA
     # ['[CLS]', 'G', 'ATTTATT', 'AGGGG', 'AGATT', 'TTATAT', 'ATCCCG', 'A', '[SEP]']
     @staticmethod

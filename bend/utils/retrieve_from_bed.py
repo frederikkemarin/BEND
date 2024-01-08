@@ -39,7 +39,7 @@ class Annotation:
         # '''
         if annotation is not None:
             if isinstance(annotation, str):
-                annotation = pd.read_csv(annotation, sep = '\s+')
+                annotation = pd.read_csv(annotation, sep = '\t')
 
             self.annotation = annotation
         if reference_genome is not None: 

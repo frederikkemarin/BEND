@@ -10,7 +10,7 @@ import os
 from sklearn.metrics import matthews_corrcoef, roc_auc_score, recall_score, precision_score, average_precision_score, confusion_matrix
 from sklearn.feature_selection import r_regression
 import pandas as pd
-from typing import Union
+from typing import Union, List
 import numpy as np
 import glob
 import pandas as pd
@@ -270,7 +270,7 @@ class BaseTrainer:
         # wandb.log({"Training latent with labels": wandb.Image(plt)})
         return
     
-    def _calculate_metric(self, y_true, y_pred):
+    def _calculate_metric(self, y_true, y_pred) -> List[float]:
         ''' 
         Calculates the metric for the given task
         The metric calculated is specified in the config.params.metric
@@ -278,7 +278,8 @@ class BaseTrainer:
             y_true: true labels
             y_pred: predicted labels
         Returns:
-            metric (str): the metric value [mcc, auroc, pearsonr, auprc]
+            metric: list of metrics. The first element is the main metric,
+                    the remaining elements are detailed metrics depending on the task
         '''
         
         # check if any padding in the target
@@ -294,7 +295,7 @@ class BaseTrainer:
             #tp = confusion_matrix(y_true.numpy().ravel(), y_pred.numpy().ravel(), normalize='true').diagonal().tolist()
             metric = [metric] + recall + precision #[list(i) for i in zip(recall, precision)]
         elif self.config.params.metric == 'auroc':
-            if self.config.task == 'histone_modification' or self.config.task == 'chromatin_accessibility':
+            if self.config.task in ['histone_modification', 'chromatin_accessibility', 'cpg_methylation']:
                 # save y_true and y_pred 
                 metric = roc_auc_score(y_true.numpy(), y_pred.numpy(), average = None)
                 metric = [metric.mean()] + metric.tolist()
@@ -304,9 +305,11 @@ class BaseTrainer:
         elif self.config.params.metric == 'pearsonr':
             metric = r_regression(y_true.detach().numpy().reshape(-1,1), 
                                     y_pred.detach().numpy().ravel())[0] # flatten arrays to get pearsons r
+            metric = [metric]
 
         elif self.config.params.metric == 'auprc' :
             metric = average_precision_score(y_true.numpy().ravel(), y_pred.numpy().ravel(), average='macro')
+            metric = [metric]
             
         return metric
     
@@ -416,8 +419,8 @@ class BaseTrainer:
 
         for epoch in range(1+ start_epoch, epochs + 1):
             train_loss = self.train_epoch(train_loader)
-            val_loss, val_metric = self.validate(val_loader)
-            val_metric = np.mean(val_metric)
+            val_loss, val_metrics = self.validate(val_loader)
+            val_metric = val_metrics[0]
             #test_loss, test_metric = self.test(test_loader, overwrite=False)
             #print('TEST:', test_loss, test_metric, checkpoint = epoch)
             # save epoch in output dir
@@ -477,8 +480,8 @@ class BaseTrainer:
         -------
         loss : float
             The average validation loss.
-        metric : float
-            The average validation metric.
+        metrics : list
+            The values of the validation metrics.
         """
         self.model.eval()
         loss = 0
@@ -500,12 +503,12 @@ class BaseTrainer:
         # compute metrics
         # save targets and outputs 
         try:
-            metric = self._calculate_metric(torch.cat(targets_all), 
+            metrics = self._calculate_metric(torch.cat(targets_all), 
                                               torch.cat(outputs))
         except:
-            metric = self._calculate_metric(torch.cat([i.flatten() for i in targets_all]), 
+            metrics = self._calculate_metric(torch.cat([i.flatten() for i in targets_all]), 
                                               torch.cat([i.flatten() for i in outputs]))
-        return loss, metric
+        return loss, metrics
 
     def test(self, test_loader, checkpoint = None, overwrite=False):
         """
@@ -546,15 +549,17 @@ class BaseTrainer:
         #print(self.model.state_dict()['conv2.1.bias'])
         print(f'Test results : Loss {loss:.4f}, {self.config.params.metric} {metric[0]:.4f}')
         
-        if isinstance(metric, (np.ndarray, list)):
+        if len(metric) > 1:#, (np.ndarray, list)):
             data = [[loss] + list(metric)]
             if self.config.params.metric == 'mcc':
                 columns = ['test_loss', f'test_{self.config.params.metric}'] +[f'test_recall_{n}' for n in range(int((len(metric)-1)/2))] + [f'test_precision_{n}' for n in range(int((len(metric)-1)/2))]
             else: 
-                columns = ['test_loss', f'test_{self.config.params.metric}_avg'] +[f'test_{self.config.params.metric}_{n}' for n in range(len(metric))]
+                # assumes metric[0] (the stopping metric) is the average of the other metrics
+                columns = ['test_loss', f'test_{self.config.params.metric}_avg'] +[f'test_{self.config.params.metric}_{n}' for n in range(len(metric)-1)]
         else:
             columns = ['test_loss', f'test_{self.config.params.metric}']
-            data = [[loss, metric]]
+            data = [[loss, metric[0]]]
+
         metrics = checkpoint.merge(pd.DataFrame(data = data, columns = columns), how = 'cross')
 
         if not overwrite and os.path.exists(f'{self.config.output_dir}/best_model_metrics.csv'):

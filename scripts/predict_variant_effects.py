@@ -16,7 +16,7 @@ def main():
     parser.add_argument('bed_file', type=str, help='Path to the bed file')
     parser.add_argument('out_file', type=str, help='Path to the output file')
     # model can be any of the ones supported by bend.utils.embedders
-    parser.add_argument('model', choices=['nt', 'dnabert', 'awdlstm', 'gpn', 'convnet', 'genalm', 'hyenadna'], type=str, help='Model architecture for computing embeddings')
+    parser.add_argument('model', choices=['nt', 'dnabert', 'awdlstm', 'gpn', 'convnet', 'genalm', 'hyenadna', 'dnabert2','grover'], type=str, help='Model architecture for computing embeddings')
     parser.add_argument('checkpoint', type=str, help='Path to or name of the model checkpoint')
     parser.add_argument('genome', type=str, help='Path to the reference genome fasta file')
     parser.add_argument('--extra_context', type=int, default=256, help='Number of extra nucleotides to include on each side of the sequence')
@@ -32,9 +32,13 @@ def main():
     # get the embedder
     if args.model == 'nt':
          embedder = embedders.NucleotideTransformerEmbedder(args.checkpoint)
+         kwargs['upsample_embeddings'] = True # each nucleotide has an embedding
     elif args.model == 'dnabert':
         embedder = embedders.DNABertEmbedder(args.checkpoint, kmer = args.kmer)
     elif args.model == 'awdlstm':
+        # autogressive model. No use for right context.
+        extra_context_left = args.extra_context
+        extra_context_right = 0
         embedder = embedders.AWDLSTMEmbedder(args.checkpoint)
     elif args.model == 'gpn':
         embedder = embedders.GPNEmbedder(args.checkpoint)
@@ -48,12 +52,19 @@ def main():
         # autogressive model. No use for right context.
         extra_context_left = args.extra_context
         extra_context_right = 0
+    elif args.model == 'dnabert2':
+        embedder = embedders.DNABert2Embedder(args.checkpoint)
+        kwargs['upsample_embeddings'] = True # each nucleotide has an embedding
+    elif args.model == 'grover':
+        embedder = embedders.GROVEREmbedder(args.checkpoint)
+        kwargs['upsample_embeddings'] = True # each nucleotide has an embedding
     else:
         raise ValueError('Model not supported')
     
 
     # load the bed file
     genome_annotation = Annotation(args.bed_file, reference_genome=args.genome)
+
 
     # extend the segments if necessary
     if args.extra_context > 0:
