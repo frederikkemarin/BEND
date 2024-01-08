@@ -41,6 +41,11 @@ class CrossEntropyLoss(nn.Module):
         self.criterion = torch.nn.CrossEntropyLoss(ignore_index = self.ignore_index, 
                                               weight=self.weight)
 
+        self.activation = nn.Softmax(dim = -1)
+
+    def _argmax(self, pred, dim = -1):
+        return torch.argmax(pred, dim = dim)
+
     def forward(self, pred, target):
         """
         Calculate the cross entropy loss for a given prediction and target.
@@ -69,6 +74,8 @@ class PoissonLoss(nn.Module):
         Get a PoissonLoss object that can be used to train a model.
         """
         super(PoissonLoss, self).__init__()
+
+        self.softmax = nn.Softmax(dim = -1)
     
     def _log(self, t, eps = 1e-20):
         return torch.log(t.clamp(min = eps))
@@ -110,6 +117,8 @@ class BCEWithLogitsLoss(nn.Module):
         super(BCEWithLogitsLoss, self).__init__()
         self.criterion = torch.nn.BCEWithLogitsLoss(reduction = reduction)
         self.class_weights = class_weights
+
+        self.activation = nn.Sigmoid()
     def forward(self, pred, target, padding_value = -100):
         """
         Calculate the BCEWithLogitsLoss for a given prediction and target.
@@ -467,7 +476,7 @@ class BaseTrainer:
             
         return loss.item()
 
-    def validate(self, data_loader):
+    def validate(self, data_loader, save_preds = False, set = 'val'):
         """
         Performs validation.
 
@@ -491,12 +500,15 @@ class BaseTrainer:
             for idx, (data, target) in enumerate(data_loader):
                 output = self.model(data.to(self.device), activation = self.config.params.activation)
                 loss += self.criterion(output, target.to(self.device).long()).item()
+                outputs = self.criterion.activation(output)
+                # check if criterion has attribute to get argmax
+                if hasattr(self.criterion, '_argmax'):
+                    outputs = self.criterion._argmax(output, dim = -1)
+                # save the predictions and targets in csv 
+                if save_preds:
+                    self._save_preds(target.detach().cpu().numpy(), output.detach().cpu().numpy(), set = set)
 
-                if  self.config.params.criterion == 'bce': 
-                    outputs.append(self.model.sigmoid(output).detach().cpu())
-                else: 
-                    outputs.append(torch.argmax(self.model.softmax(output), dim=-1).detach().cpu()) 
-                
+                outputs.append(output.detach().cpu())
                 targets_all.append(target.detach().cpu())  
 
         loss /= (idx + 1) 
@@ -539,9 +551,9 @@ class BaseTrainer:
         print(f'{self.config.output_dir}/checkpoints/epoch_{int(checkpoint["Epoch"].iloc[0])}.pt')
         epoch, train_loss, val_loss, val_metric = self._load_checkpoint(f'{self.config.output_dir}/checkpoints/epoch_{int(checkpoint["Epoch"].iloc[0])}.pt')
         print(f'Loaded checkpoint from epoch {epoch}, train loss: {train_loss:.3f}, val loss: {val_loss:.3f}, Val {self.config.params.metric}: {np.mean(val_metric):.3f}')
-    
         # test
-        loss, metric = self.validate(test_loader)
+        loss, metric = self.validate(test_loader, save_preds = True, set = 'test')
+      
         print(f'Test results : Loss {loss:.4f}, {self.config.params.metric} {metric[0]:.4f}')
         
         if len(metric) > 1:#, (np.ndarray, list)):
@@ -558,12 +570,11 @@ class BaseTrainer:
         metrics = checkpoint.merge(pd.DataFrame(data = data, columns = columns), how = 'cross')
 
         if not overwrite and os.path.exists(f'{self.config.output_dir}/best_model_metrics.csv'):
+            
             best_model_metrics = pd.read_csv(f'{self.config.output_dir}/best_model_metrics.csv', index_col = False) 
             # concat metrics to best model metrics
             metrics = pd.concat([best_model_metrics, metrics], ignore_index=True)
-
         # save metrics to best model metrics
-        #metrics = metrics.drop_duplicates().reset_index(drop=True)
         metrics.to_csv(f'{self.config.output_dir}/best_model_metrics.csv', index = False)
         return loss, metric 
     
