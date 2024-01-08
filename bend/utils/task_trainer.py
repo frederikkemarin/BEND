@@ -262,6 +262,19 @@ class BaseTrainer:
             }, f'{self.config.output_dir}/checkpoints/epoch_{epoch}.pt')
         return
     
+    def _save_preds(self, target, output, set = 'val'):
+        '''
+        Saves the predictions and targets in a csv file
+        '''
+        # save targets and outputs 
+        df = pd.DataFrame([[target, output]], columns = ['target', 'output'])
+        if not os.path.exists(f'{self.config.output_dir}/{set}_preds_epoch{self.current_epoch}.csv'):
+            df.to_csv(f'{self.config.output_dir}/{set}_preds_epoch{self.current_epoch}.csv', index = False)
+        else: 
+            # append to existing file without column 
+            df.to_csv(f'{self.config.output_dir}/{set}_preds_epoch{self.current_epoch}.csv', mode='a', header=False, index = False)
+        return
+
     def _log_loss(self, epoch, train_loss, val_loss, val_metric):
         df = pd.read_csv(f'{self.config.output_dir}/losses.csv')
         df = pd.concat([df, pd.DataFrame([[epoch, train_loss, val_loss, val_metric]], 
