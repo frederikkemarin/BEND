@@ -535,18 +535,13 @@ class BaseTrainer:
         if checkpoint is None:
             df = pd.read_csv(f'{self.config.output_dir}/losses.csv')
             checkpoint = pd.DataFrame(df.iloc[df[f"val_{self.config.params.metric}"].idxmax()]).T.reset_index(drop=True) 
-        #print('before load checkpoint', )
-        #print(self.model.state_dict()['conv2.1.bias'])
         # load checkpoint
         print(f'{self.config.output_dir}/checkpoints/epoch_{int(checkpoint["Epoch"].iloc[0])}.pt')
         epoch, train_loss, val_loss, val_metric = self._load_checkpoint(f'{self.config.output_dir}/checkpoints/epoch_{int(checkpoint["Epoch"].iloc[0])}.pt')
         print(f'Loaded checkpoint from epoch {epoch}, train loss: {train_loss:.3f}, val loss: {val_loss:.3f}, Val {self.config.params.metric}: {np.mean(val_metric):.3f}')
-        #print('before test', )
-        #print(self.model.state_dict()['conv2.1.bias'])
+    
         # test
         loss, metric = self.validate(test_loader)
-        #print('after test', )
-        #print(self.model.state_dict()['conv2.1.bias'])
         print(f'Test results : Loss {loss:.4f}, {self.config.params.metric} {metric[0]:.4f}')
         
         if len(metric) > 1:#, (np.ndarray, list)):
