@@ -305,8 +305,8 @@ class BaseTrainer:
         '''
 
         # if gene finding task take arg max 
-        if self.config.task == 'gene_finding': 
-            y_pred = torch.argmax(y_pred, dim = -1)
+        #if self.config.task == 'gene_finding': 
+        y_pred = torch.argmax(y_pred, dim = -1)
 
         # check if any padding in the target
         if torch.any(y_true  == self.config.data.padding_value):
