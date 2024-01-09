@@ -304,9 +304,6 @@ class BaseTrainer:
                     the remaining elements are detailed metrics depending on the task
         '''
 
-        # if gene finding task take arg max 
-        #if self.config.task == 'gene_finding': 
-        y_pred = torch.argmax(y_pred, dim = -1)
 
         # check if any padding in the target
         if torch.any(y_true  == self.config.data.padding_value):
@@ -315,6 +312,7 @@ class BaseTrainer:
             y_pred = y_pred[mask]
 
         if self.config.params.metric == 'mcc':
+            y_pred = torch.argmax(y_pred, dim = -1)
             metric =  matthews_corrcoef(y_true.numpy().ravel(), y_pred.numpy().ravel())
             recall = recall_score(y_true.numpy().ravel(), y_pred.numpy().ravel(), average=None).tolist()
             precision = precision_score(y_true.numpy().ravel(), y_pred.numpy().ravel(), average=None).tolist()
