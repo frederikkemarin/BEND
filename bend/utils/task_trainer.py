@@ -303,7 +303,11 @@ class BaseTrainer:
             metric: list of metrics. The first element is the main metric,
                     the remaining elements are detailed metrics depending on the task
         '''
-        
+
+        # if gene finding task take arg max 
+        if self.config.task == 'gene_finding': 
+            y_pred = torch.argmax(y_pred, dim = -1)
+
         # check if any padding in the target
         if torch.any(y_true  == self.config.data.padding_value):
             mask = y_true != self.config.data.padding_value
@@ -514,13 +518,13 @@ class BaseTrainer:
                 output = self.model(data.to(self.device), activation = self.config.params.activation)
                 loss += self.criterion(output, target.to(self.device).long()).item()
                 outputs = self.criterion.activation(output)
-                # check if criterion has attribute to get argmax
-                if hasattr(self.criterion, '_argmax'):
-                    outputs = self.criterion._argmax(output, dim = -1)
                 # save the predictions and targets in csv 
                 if save_preds:
                     self._save_preds(target.detach().cpu().numpy(), output.detach().cpu().numpy(), set = set)
-
+                ## check if criterion has attribute to get argmax
+                #if hasattr(self.criterion, '_argmax'):
+                #    outputs = self.criterion._argmax(output, dim = -1)
+                
                 outputs.append(output.detach().cpu())
                 targets_all.append(target.detach().cpu())  
 
