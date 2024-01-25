@@ -263,17 +263,17 @@ class BaseTrainer:
             }, f'{self.config.output_dir}/checkpoints/epoch_{epoch}.pt')
         return
     
-    def _save_preds(self, target, output, set = 'val'):
+    def _save_preds(self, target, output, epoch, set = 'val'):
         '''
         Saves the predictions and targets in a csv file
         '''
         # save targets and outputs 
         df = pd.DataFrame([[target, output]], columns = ['target', 'output'])
-        if not os.path.exists(f'{self.config.output_dir}/{set}_preds_epoch{self.current_epoch}.csv'):
-            df.to_csv(f'{self.config.output_dir}/{set}_preds_epoch{self.current_epoch}.csv', index = False)
+        if not os.path.exists(f'{self.config.output_dir}/{set}_preds_epoch{epoch}.csv'):
+            df.to_csv(f'{self.config.output_dir}/{set}_preds_epoch{epoch}.csv', index = False)
         else: 
             # append to existing file without column 
-            df.to_csv(f'{self.config.output_dir}/{set}_preds_epoch{self.current_epoch}.csv', mode='a', header=False, index = False)
+            df.to_csv(f'{self.config.output_dir}/{set}_preds_epoch{epoch}.csv', mode='a', header=False, index = False)
         return
 
     def _log_loss(self, epoch, train_loss, val_loss, val_metric):
@@ -492,7 +492,7 @@ class BaseTrainer:
             
         return loss.item()
 
-    def validate(self, data_loader, save_preds = False, set = 'val'):
+    def validate(self, data_loader, save_preds = False, epoch = None,  set = 'val'):
         """
         Performs validation.
 
@@ -519,7 +519,7 @@ class BaseTrainer:
                 outputs = self.criterion.activation(output)
                 # save the predictions and targets in csv 
                 if save_preds:
-                    self._save_preds(target.detach().cpu().numpy(), output.detach().cpu().numpy(), set = set)
+                    self._save_preds(target.detach().cpu().numpy(), output.detach().cpu().numpy(), epoch = epoch, set = set)
                 ## check if criterion has attribute to get argmax
                 #if hasattr(self.criterion, '_argmax'):
                 #    outputs = self.criterion._argmax(output, dim = -1)
@@ -568,7 +568,7 @@ class BaseTrainer:
         epoch, train_loss, val_loss, val_metric = self._load_checkpoint(f'{self.config.output_dir}/checkpoints/epoch_{int(checkpoint["Epoch"].iloc[0])}.pt')
         print(f'Loaded checkpoint from epoch {epoch}, train loss: {train_loss:.3f}, val loss: {val_loss:.3f}, Val {self.config.params.metric}: {np.mean(val_metric):.3f}')
         # test
-        loss, metric = self.validate(test_loader, save_preds = True, set = 'test')
+        loss, metric = self.validate(test_loader, save_preds = True, set = 'test', epoch = epoch)
       
         print(f'Test results : Loss {loss:.4f}, {self.config.params.metric} {metric[0]:.4f}')
         
