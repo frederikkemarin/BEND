@@ -262,17 +262,17 @@ class BaseTrainer:
             }, f'{self.config.output_dir}/checkpoints/epoch_{epoch}.pt')
         return
     
-    def _save_preds(self, target, output, epoch, set = 'val'):
+    def _save_preds(self, target, output, epoch, set_ = 'val'):
         '''
         Saves the predictions and targets in a csv file
         '''
         # save targets and outputs 
-        df = pd.DataFrame([[target, output]], columns = ['target', 'output'])
-        if not os.path.exists(f'{self.config.output_dir}/{set}_preds_epoch{epoch}.csv'):
-            df.to_csv(f'{self.config.output_dir}/{set}_preds_epoch{epoch}.csv', index = False)
+        df = pd.DataFrame(zip(*[target, output]), columns = ['target', 'output'])
+        if not os.path.exists(f'{self.config.output_dir}/{set_}_preds_epoch{epoch}.csv'):
+            df.to_csv(f'{self.config.output_dir}/{set_}_preds_epoch{epoch}.csv', index = False)
         else: 
             # append to existing file without column 
-            df.to_csv(f'{self.config.output_dir}/{set}_preds_epoch{epoch}.csv', mode='a', header=False, index = False)
+            df.to_csv(f'{self.config.output_dir}/{set_}_preds_epoch{epoch}.csv', mode='a', header=False, index = False)
         return
 
     def _log_loss(self, epoch, train_loss, val_loss, val_metric):
@@ -307,6 +307,7 @@ class BaseTrainer:
 
         # check if any padding in the target
         if torch.any(y_true  == self.config.data.padding_value):
+            print(mask.shape, y_true.shape, y_pred.shape)
             mask = y_true != self.config.data.padding_value
             y_true = y_true[mask]
             y_pred = y_pred[mask]
@@ -491,7 +492,7 @@ class BaseTrainer:
             
         return loss.item()
 
-    def validate(self, data_loader, save_preds = False, epoch = None,  set = 'val'):
+    def validate(self, data_loader, save_preds = False, epoch = None,  set_ = 'val'):
         """
         Performs validation.
 
@@ -515,10 +516,13 @@ class BaseTrainer:
             for idx, (data, target) in enumerate(data_loader):
                 output = self.model(data.to(self.device), activation = self.config.params.activation)
                 loss += self.criterion(output, target.to(self.device).long()).item()
-                outputs = self.criterion.activation(output)
+                output = self.criterion.activation(output)
                 # save the predictions and targets in csv 
                 if save_preds:
-                    self._save_preds(target.detach().cpu().numpy(), output.detach().cpu().numpy(), epoch = epoch, set = set)
+                    #torch.save({'target': target.detach().cpu().numpy(), 
+                    #            'output': output.detach().cpu().numpy()}, 
+                    #            f'{self.config.output_dir}/{set_}_preds_epoch{epoch}_batch{idx}.pt')
+                    self._save_preds(target.detach().cpu().numpy(), output.detach().cpu().numpy(), epoch = epoch, set_ = set_)
                 ## check if criterion has attribute to get argmax
                 #if hasattr(self.criterion, '_argmax'):
                 #    outputs = self.criterion._argmax(output, dim = -1)
@@ -567,7 +571,7 @@ class BaseTrainer:
         epoch, train_loss, val_loss, val_metric = self._load_checkpoint(f'{self.config.output_dir}/checkpoints/epoch_{int(checkpoint["Epoch"].iloc[0])}.pt')
         print(f'Loaded checkpoint from epoch {epoch}, train loss: {train_loss:.3f}, val loss: {val_loss:.3f}, Val {self.config.params.metric}: {np.mean(val_metric):.3f}')
         # test
-        loss, metric = self.validate(test_loader, save_preds = True, set = 'test', epoch = epoch)
+        loss, metric = self.validate(test_loader, save_preds = True, set_ = 'test', epoch = epoch)
       
         print(f'Test results : Loss {loss:.4f}, {self.config.params.metric} {metric[0]:.4f}')
         
