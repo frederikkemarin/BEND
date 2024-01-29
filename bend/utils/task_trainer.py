@@ -304,20 +304,17 @@ class BaseTrainer:
                     the remaining elements are detailed metrics depending on the task
         '''
 
-
         # check if any padding in the target
         if torch.any(y_true  == self.config.data.padding_value):
-            print(mask.shape, y_true.shape, y_pred.shape)
             mask = y_true != self.config.data.padding_value
             y_true = y_true[mask]
             y_pred = y_pred[mask]
 
         if self.config.params.metric == 'mcc':
-            y_pred = torch.argmax(y_pred, dim = -1)
+            #y_pred = torch.argmax(y_pred, dim = -1) # TODO : not neccessary, performed in self.validate, but only if criterion has attribute _argmax
             metric =  matthews_corrcoef(y_true.numpy().ravel(), y_pred.numpy().ravel())
             recall = recall_score(y_true.numpy().ravel(), y_pred.numpy().ravel(), average=None).tolist()
             precision = precision_score(y_true.numpy().ravel(), y_pred.numpy().ravel(), average=None).tolist()
-            #tp = confusion_matrix(y_true.numpy().ravel(), y_pred.numpy().ravel(), normalize='true').diagonal().tolist()
             metric = [metric] + recall + precision #[list(i) for i in zip(recall, precision)]
         elif self.config.params.metric == 'auroc':
             if self.config.task in ['histone_modification', 'chromatin_accessibility', 'cpg_methylation']:
@@ -446,8 +443,6 @@ class BaseTrainer:
             train_loss = self.train_epoch(train_loader)
             val_loss, val_metrics = self.validate(val_loader)
             val_metric = val_metrics[0]
-            #test_loss, test_metric = self.test(test_loader, overwrite=False)
-            #print('TEST:', test_loss, test_metric, checkpoint = epoch)
             # save epoch in output dir
             self._save_checkpoint(epoch, train_loss, val_loss, val_metric)
             # log losses to csv
@@ -519,20 +514,16 @@ class BaseTrainer:
                 output = self.criterion.activation(output)
                 # save the predictions and targets in csv 
                 if save_preds:
-                    #torch.save({'target': target.detach().cpu().numpy(), 
-                    #            'output': output.detach().cpu().numpy()}, 
-                    #            f'{self.config.output_dir}/{set_}_preds_epoch{epoch}_batch{idx}.pt')
                     self._save_preds(target.detach().cpu().numpy(), output.detach().cpu().numpy(), epoch = epoch, set_ = set_)
+                # save targets and outputs 
                 ## check if criterion has attribute to get argmax
-                #if hasattr(self.criterion, '_argmax'):
-                #    outputs = self.criterion._argmax(output, dim = -1)
-                
+                if hasattr(self.criterion, '_argmax'):
+                    output = self.criterion._argmax(output, dim = -1)
                 outputs.append(output.detach().cpu())
                 targets_all.append(target.detach().cpu())  
 
         loss /= (idx + 1) 
         # compute metrics
-        # save targets and outputs 
         try:
             metrics = self._calculate_metric(torch.cat(targets_all), 
                                               torch.cat(outputs))
