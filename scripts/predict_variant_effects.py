@@ -28,7 +28,7 @@ def main():
     extra_context_left = args.extra_context
     extra_context_right = args.extra_context
 
-    kwargs = {'disable_tqdm': True}
+    kwargs = {'disable_tqdm': True, 'upsample_embeddings': False}
     # get the embedder
     if args.model == 'nt':
          embedder = embedders.NucleotideTransformerEmbedder(args.checkpoint)
@@ -90,6 +90,9 @@ def main():
         dna_alt = ''.join(dna_alt)
 
         embedding_wt, embedding_alt = embedder.embed([dna, dna_alt], **kwargs)
+        if kwargs['upsample_embeddings'] and len(embedding_wt.squeeze()) != len(dna):
+            print(f'Warning: embedding length of sample {index} ({len(embedding_wt.squeeze())}) does not match sequence length ({len(dna)})')
+            continue
         d = spatial.distance.cosine(embedding_alt[0, args.embedding_idx], embedding_wt[0, args.embedding_idx])
         genome_annotation.annotation.loc[index, 'distance'] = d
 
