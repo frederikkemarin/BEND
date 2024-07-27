@@ -230,8 +230,6 @@ class DNABertEmbedder(BaseEmbedder):
                 kmers = self._seq2kmer_batch(sequence, self.kmer)
                 model_input = self.tokenizer.batch_encode_plus(kmers, 
                                                                add_special_tokens=True,
-                                                               padding = 'max_length',
-                                                               max_length = len(sequence[0])+2, 
                                                                return_tensors='pt', 
                                                                )["input_ids"]
                 
