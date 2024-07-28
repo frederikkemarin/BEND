@@ -50,6 +50,7 @@ dnabert6:
   _target_ : bend.utils.embedders.DNABertEmbedder
   model_path : ${embedders_dir}/dnabert6
   kmer : 6
+  upsample_embeddings : true
 gena-lm-bigbird-base-t2t:
   _target_ : bend.utils.embedders.GENALMEmbedder
   model_name : AIRI-Institute/gena-lm-bigbird-base-t2t
