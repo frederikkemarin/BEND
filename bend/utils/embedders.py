@@ -663,7 +663,7 @@ class GENALMEmbedder(BaseEmbedder):
 
 class HyenaDNAEmbedder(BaseEmbedder):
     '''Embed using the HyenaDNA model https://arxiv.org/abs/2306.15794'''
-    def load_model(self, model_path = 'pretrained_models/hyenadna/hyenadna-tiny-1k-seqlen', **kwargs):
+    def load_model(self, model_path = 'pretrained_models/hyenadna/hyenadna-tiny-1k-seqlen', return_logits: bool=False, **kwargs):
         # '''Load the model from the checkpoint path
         # 'hyenadna-tiny-1k-seqlen'   
         # 'hyenadna-small-32k-seqlen'
@@ -682,6 +682,8 @@ class HyenaDNAEmbedder(BaseEmbedder):
             If the path does not exist, the model will be downloaded from HuggingFace. Rather than just downloading the model,
             HyenaDNA's `from_pretrained` method relies on cloning the HuggingFace-hosted repository, and using git lfs to download the model.
             This requires git lfs to be installed on your system, and will fail if it is not.
+        return_logits : bool, optional
+            If True, returns logits instead of embeddings. Defaults to False.
 
         
         """
@@ -707,6 +709,8 @@ class HyenaDNAEmbedder(BaseEmbedder):
         use_head = False
         n_classes = 2  # not used for embeddings only
 
+        use_lm_head = return_logits
+
         # you can override with your own backbone config here if you want,
         # otherwise we'll load the HF one in None
         backbone_cfg = None
@@ -720,8 +724,10 @@ class HyenaDNAEmbedder(BaseEmbedder):
             config=backbone_cfg,
             device=device,
             use_head=use_head,
+            use_lm_head=use_lm_head,
             n_classes=n_classes,
         )
+        model.eval()
 
         model.to(device)
         self.model = model
@@ -764,22 +770,18 @@ class HyenaDNAEmbedder(BaseEmbedder):
             List of embeddings.
         '''
 
-
-    # # prep model and forward
-    # model.to(device)
-    #             with torch.inference_mode():
-
         embeddings = [] 
         with torch.inference_mode():
             for s in tqdm(sequences, disable=disable_tqdm):
                 chunks = [s[chunk : chunk + self.max_length] for chunk in  range(0, len(s), self.max_length)] # split into chunks
                 embedded_chunks = []
                 for n_chunk, chunk in enumerate(chunks):
+                    # reference: https://colab.research.google.com/drive/1wyVEQd4R3HYLTUOXEEQmp_I8aNC_aLhL?usp=sharing#scrollTo=-1wq2uwUctPV
                     #### Single embedding example ####
 
                     # create a sample 450k long, prepare
                     # sequence = 'ACTG' * int(self.max_length/4)
-                    tok_seq = self.tokenizer(chunk) # adds CLS and SEP tokens
+                    tok_seq = self.tokenizer(chunk) # adds CLS and SEP tokens (0=CLS, 1=EOS)
                     tok_seq = tok_seq["input_ids"]  # grab ids
 
                     # place on device, convert to tensor
@@ -799,7 +801,6 @@ class HyenaDNAEmbedder(BaseEmbedder):
 
         return embeddings
 
-    # print(embeddings.shape)  # embeddings here!
 
 
 class DNABert2Embedder(BaseEmbedder):
