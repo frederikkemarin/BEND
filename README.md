@@ -4,14 +4,14 @@
 [![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 [![Documentation Status](https://readthedocs.org/projects/bend/badge/?version=latest)](https://bend.readthedocs.io/en/latest/?badge=latest)
 
-The BEND preprint is available here: 
+The BEND paper (ICLR 2024) is available here: 
 
 "[BEND: BENCHMARKING DNA LANGUAGE MODELS ON BIOLOGICALLY MEANINGFUL TASKS](https://arxiv.org/abs/2311.12570)"
 
 Frederikke Isa Marin, Felix Teufel, Marc Horlacher, Dennis Madsen, Dennis Pultz, Ole Winther, Wouter Boomsma
 
 ## Documentation
-[Documentation for the BEND code repository](https://bend.readthedocs.io/en/latest/?badge=latest).
+[Documentation for the BEND code repository](https://bend.readthedocs.io/en/latest/?badge=latest)
 
 ## Data
 
@@ -78,7 +78,7 @@ Embedders have a default-true argument `remove_special_tokens=True` in `embed()`
 
 All embedders can be used as follows:
 ```python
-from bend.embedders import NucleotideTransformerEmbedder
+from bend.utils.embedders import NucleotideTransformerEmbedder
 
 # load the embedder with a valid checkpoint name or path
 embedder = NucleotideTransformerEmbedder('InstaDeepAI/nucleotide-transformer-2.5b-multi-species')
@@ -89,7 +89,7 @@ embeddings = embedder.embed(['AGGATGCCGAGAGTATATGGGA', 'CCCAACCGAGAGTATATGTTAT']
 embedding = embedder('AGGATGCCGAGAGTATATGGGA') 
 
 # This requires git LFS and will automatically download the checkpoint, if not already present
-from bend.embedders import HyenaDNAEmbedder
+from bend.utils.embedders import HyenaDNAEmbedder
 embedder = HyenaDNAEmbedder('pretrained_models/hyenadna/hyenadna-tiny-1k-seqlen')
 ```
 
@@ -180,6 +180,16 @@ As the first step, the data for a new task needs to be formatted in the [bed-bas
 ## Citation Guidelines
 
 The datasets included in BEND were collected from a variety of sources. When you use any of the datasets, please ensure to correctly cite the respective original publications describing each dataset.
+
+### BEND
+    @inproceedings{
+    marin2024bend,
+    title={{BEND}: Benchmarking {DNA} Language Models on Biologically Meaningful Tasks},
+    author={Frederikke Isa Marin and Felix Teufel and Marc Horlacher and Dennis Madsen and Dennis Pultz and Ole Winther and Wouter Boomsma},
+    booktitle={The Twelfth International Conference on Learning Representations},
+    year={2024},
+    url={https://openreview.net/forum?id=uKB4cFNQFg}
+    }
 
 ### Gene finding ([GENCODE](https://www.gencodegenes.org/))
 
