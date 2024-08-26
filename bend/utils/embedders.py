@@ -663,7 +663,7 @@ class GENALMEmbedder(BaseEmbedder):
 
 class HyenaDNAEmbedder(BaseEmbedder):
     '''Embed using the HyenaDNA model https://arxiv.org/abs/2306.15794'''
-    def load_model(self, model_path = 'pretrained_models/hyenadna/hyenadna-tiny-1k-seqlen', return_logits: bool=False, **kwargs):
+    def load_model(self, model_path = 'pretrained_models/hyenadna/hyenadna-tiny-1k-seqlen', return_logits: bool=False, return_loss: bool=False, **kwargs):
         # '''Load the model from the checkpoint path
         # 'hyenadna-tiny-1k-seqlen'   
         # 'hyenadna-small-32k-seqlen'
@@ -684,6 +684,8 @@ class HyenaDNAEmbedder(BaseEmbedder):
             This requires git lfs to be installed on your system, and will fail if it is not.
         return_logits : bool, optional
             If True, returns logits instead of embeddings. Defaults to False.
+        return_loss : bool, optional
+            If True, returns the unreduced next token prediction loss. Incompatible with return_logits. Defaults to False.
 
         
         """
@@ -698,6 +700,12 @@ class HyenaDNAEmbedder(BaseEmbedder):
 
         self.max_length = max_lengths[model_name]  # auto selects
 
+        if return_logits and return_loss:
+            raise ValueError('Only one of return_logits and return_loss can be True')
+        
+        self.return_logits = return_logits
+        self.return_loss = return_loss
+
         # all these settings are copied directly from huggingface.py
 
         # data settings:
@@ -709,7 +717,7 @@ class HyenaDNAEmbedder(BaseEmbedder):
         use_head = False
         n_classes = 2  # not used for embeddings only
 
-        use_lm_head = return_logits
+        use_lm_head = return_logits or return_loss # the head we added back in.
 
         # you can override with your own backbone config here if you want,
         # otherwise we'll load the HF one in None
@@ -759,7 +767,8 @@ class HyenaDNAEmbedder(BaseEmbedder):
         disable_tqdm : bool, optional
             Whether to disable the tqdm progress bar. Defaults to False.
         remove_special_tokens : bool, optional
-            Whether to remove the CLS and SEP tokens from the embeddings. Defaults to True.
+            Whether to remove the CLS and SEP tokens from the embeddings. Defaults to True. Cannot be set to False if
+            the return_loss option of the embedder is True (autoregression forces us to discard the BOS token position either way).
         upsample_embeddings : bool, optional
             Whether to upsample the embeddings to match the length of the input sequences. Defaults to False.
             Only provided for compatibility with other embedders. GPN embeddings are already the same length as the input sequence.
@@ -790,7 +799,23 @@ class HyenaDNAEmbedder(BaseEmbedder):
 
 
                     output = self.model(tok_seq)
-                    if remove_special_tokens:
+
+
+                    if self.return_loss and remove_special_tokens:
+                        # vocab:
+                        # {0: '[CLS]', 1: '[SEP]', 2: '[BOS]', 3: '[MASK]', 4: '[PAD]', 5: '[RESERVED]', 6: '[UNK]', 7: 'A', 8: 'C', 9: 'G', 10: 'T', 11: 'N'}
+                        output = output[:, :,7: 12]
+                        shift_logits = output[..., :-2, :].contiguous() # remove EOS and last AA
+                        shift_labels = tok_seq[..., 1:-1] # remove BOS and EOS
+                        shift_labels = shift_labels - 7 # shift to 0-indexed
+                        loss = torch.nn.functional.cross_entropy(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1), reduction='none')
+                        output = loss.unsqueeze(0) # dim 0 gets lost because of view
+
+
+                    elif self.return_loss and not remove_special_tokens:
+                        raise ValueError('return_loss is incompatible with remove_special_tokens=False. We always remove EOS and BOS tokens to calculate the loss.')
+                    
+                    elif remove_special_tokens:
                         output = output[:,1:-1]
 
                     embedded_chunks.append(output.detach().cpu().numpy())
