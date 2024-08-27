@@ -41,7 +41,6 @@ logging.set_verbosity_error()
 
 device =  torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-
 ##
 ## GPN https://www.biorxiv.org/content/10.1101/2022.08.22.504706v1
 ##
@@ -314,7 +313,7 @@ class NucleotideTransformerEmbedder(BaseEmbedder):
     Embed using the Nuclieotide Transformer (NT) model https://www.biorxiv.org/content/10.1101/2023.01.11.523679v2.full
     """
 
-    def load_model(self, model_name, **kwargs):
+    def load_model(self, model_name, return_logits: bool = False, return_loss: bool = False, **kwargs):
         """
         Load the Nuclieotide Transformer (NT) model.
 
@@ -325,7 +324,14 @@ class NucleotideTransformerEmbedder(BaseEmbedder):
             When providing a name, the model will be loaded from the HuggingFace model hub.
             Alternatively, you can provide a path to a local model directory. We check whether the model_name
             contains 'v2' to determine whether we need to follow the V2 model API or not.
+        return_logits : bool, optional
+            Whether to return the logits. Note that we do not apply any masking. Defaults to False.
+        return_loss : bool, optional
+            Whether to return the loss. Note that we do not apply any masking. Defaults to False.
         """
+
+        if return_logits and return_loss:
+            raise ValueError('Only one of return_logits and return_loss can be True.')
 
         # Get pretrained model
         if 'v2' in model_name:
@@ -333,16 +339,16 @@ class NucleotideTransformerEmbedder(BaseEmbedder):
             self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
             self.max_seq_len = 12282 # "model_max_length": 2048, --> 12,288
             self.max_tokens = 2048
-            self.v2 = True
         else:
-            self.model = AutoModel.from_pretrained(model_name)
+            self.model = AutoModelForMaskedLM.from_pretrained(model_name)
             self.tokenizer = AutoTokenizer.from_pretrained(model_name)
             self.max_seq_len = 5994 # "model_max_length": 1000, 6-mer --> 6000
             self.max_tokens = 1000
-            self.v2 = False
         self.model.to(device)
         self.model.eval()
 
+        self.return_logits = return_logits
+        self.return_loss = return_loss
 
     def embed(self, sequences: List[str], disable_tqdm: bool = False, remove_special_tokens: bool = True, upsample_embeddings: bool = False):
         """
@@ -376,16 +382,27 @@ class NucleotideTransformerEmbedder(BaseEmbedder):
                     tokens_ids = self.tokenizer(chunk, return_tensors = 'pt')['input_ids'].int().to(device)
                     if len(tokens_ids[0]) > self.max_tokens: # too long to fit into the model
                         split = torch.split(tokens_ids, self.max_tokens, dim=-1)
-                        if self.v2:
-                            outs = [self.model(item, output_hidden_states=True)['hidden_states'][-1].detach().cpu().numpy() for item in split]
+                        if self.return_logits:
+                            outs = [self.model(item)['logits'].detach().cpu().numpy() for item in split]
+                        elif self.return_loss:
+                            outs = []
+                            for item in split:
+                                out = self.model(item)['logits'].detach()
+                                out = torch.nn.functional.cross_entropy(out.view(-1, self.model.config.vocab_size), item.view(-1).to(torch.long), reduction='none')
+                                out = out.unsqueeze(0).detach().cpu().numpy()
+                                outs.append(out)
                         else:
-                            outs = [self.model(item)['last_hidden_state'].detach().cpu().numpy() for item in split]
+                            outs = [self.model(item, output_hidden_states=True)['hidden_states'][-1].detach().cpu().numpy() for item in split]
                         outs = np.concatenate(outs, axis=1)
                     else:
-                        if self.v2:
-                            outs = self.model(tokens_ids, output_hidden_states=True)['hidden_states'][-1].detach().cpu().numpy()
+                        if self.return_logits:
+                            outs = self.model(tokens_ids)['logits'].detach().cpu().numpy()
+                        elif self.return_loss:
+                            outs = self.model(tokens_ids)['logits'].detach()#.cpu().numpy()
+                            outs = torch.nn.functional.cross_entropy(outs.view(-1, self.model.config.vocab_size), tokens_ids.view(-1).to(torch.long), reduction='none')
+                            outs = outs.unsqueeze(0).detach().cpu().numpy()
                         else:
-                            outs = self.model(tokens_ids)['last_hidden_state'].detach().cpu().numpy() # get last hidden state
+                            outs = self.model(tokens_ids, output_hidden_states=True)['hidden_states'][-1].detach().cpu().numpy()
 
                     if upsample_embeddings:
                         outs = self._repeat_embedding_vectors(self.tokenizer.convert_ids_to_tokens(tokens_ids[0]), outs)
@@ -796,7 +813,6 @@ class HyenaDNAEmbedder(BaseEmbedder):
                     # place on device, convert to tensor
                     tok_seq = torch.LongTensor(tok_seq).unsqueeze(0)  # unsqueeze for batch dim
                     tok_seq = tok_seq.to(device)
-
 
                     output = self.model(tok_seq)
 
