@@ -702,7 +702,9 @@ class HyenaDNAEmbedder(BaseEmbedder):
         return_logits : bool, optional
             If True, returns logits instead of embeddings. Defaults to False.
         return_loss : bool, optional
-            If True, returns the unreduced next token prediction loss. Incompatible with return_logits. Defaults to False.
+            If True, returns the unreduced next token prediction loss. Incompatible with return_logits. We trim special tokens from the
+            output so that the loss is only computed on the ACTGN vocabulary.
+              Defaults to False.
 
         
         """
@@ -788,7 +790,7 @@ class HyenaDNAEmbedder(BaseEmbedder):
             the return_loss option of the embedder is True (autoregression forces us to discard the BOS token position either way).
         upsample_embeddings : bool, optional
             Whether to upsample the embeddings to match the length of the input sequences. Defaults to False.
-            Only provided for compatibility with other embedders. GPN embeddings are already the same length as the input sequence.
+            Only provided for compatibility with other embedders. HyenaDNA embeddings are already the same length as the input sequence.
         Returns
         -------
 
@@ -1128,6 +1130,104 @@ class GROVEREmbedder(BaseEmbedder):
         return new_embeddings
 
 
+class CaduceusEmbedder(BaseEmbedder):
+
+    def load_model(self, model_name: str = "kuleshov-group/caduceus-ph_seqlen-131k_d_model-256_n_layer-16", return_logits: bool=False, return_loss: bool=False, **kwargs):
+        """
+        Load the Caduceus model (https://arxiv.org/abs/2403.03234).
+
+        Parameters
+        ----------
+        model_name : str, optional
+            The name of the model to load. Defaults to "kuleshov-group/caduceus-ph_seqlen-131k_d_model-256_n_layer-16".
+            When providing a name, the model will be loaded from the HuggingFace model hub.
+            Alternatively, you can provide a path to a local model directory.
+        return_logits : bool, optional
+            If True, returns logits instead of embeddings. Defaults to False.
+        return_loss : bool, optional
+            If True, returns the unreduced next token prediction loss. Incompatible with return_logits. 
+            We trim special tokens from the output so that the loss is only computed on the ACTGN vocabulary.
+              Defaults to False.
+
+        
+        """
+        # check that we have mamba-ssm==1.2.0.post1
+        try:
+            import mamba_ssm
+        except ImportError:
+            raise ImportError('Caduceus requires mamba-ssm==1.2.0.post1. Please install it with `pip install mamba-ssm==1.2.0.post1`.')
+        if mamba_ssm.__version__ != '1.2.0.post1':
+            raise ImportError('Caduceus requires mamba-ssm==1.2.0.post1. Please install it with `pip install mamba-ssm==1.2.0.post1`.')
+        
+
+        if return_logits and return_loss:
+            raise ValueError('Only one of return_logits and return_loss can be True')
+
+        self.max_length = 131072
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+        self.model = AutoModelForMaskedLM.from_pretrained(model_name, trust_remote_code=True)
+        self.model.eval()
+        self.model.to(device)
+
+        self.return_logits = return_logits
+        self.return_loss = return_loss
+
+    def embed(self, sequences: List[str], disable_tqdm: bool = False, remove_special_tokens: bool = True, upsample_embeddings: bool = False):
+        """
+        Embed sequences using the Caduceus model.
+
+        Parameters
+        ----------
+        sequences : List[str]
+            List of sequences to embed.
+        disable_tqdm : bool, optional
+            Whether to disable the tqdm progress bar. Defaults to False.
+        remove_special_tokens : bool, optional
+            Whether to remove the CLS and SEP tokens from the embeddings. Defaults to True. Only provided for compatibility with other embedders.
+        upsample_embeddings : bool, optional
+            Whether to upsample the embeddings to match the length of the input sequences. Defaults to False. 
+            Only provided for compatibility with other embedders. Caduceus embeddings are already the same length as the input sequence.
+
+        Returns
+        -------
+        List[np.ndarray]
+            List of embeddings.
+        """
+        ref_tokenized = self.tokenizer.batch_encode_plus(
+        sequences,
+        add_special_tokens=False,
+        return_attention_mask=False,
+        max_length=self.max_length,
+        truncation=True,
+        )
+        embeddings = []
+        with torch.no_grad():
+            for sequence in tqdm(sequences, disable=disable_tqdm):
+                chunks = [sequence[chunk : chunk + self.max_length] for chunk in  range(0, len(sequence), self.max_length)]
+                embedded_chunks = []
+                for n_chunk, chunk in enumerate(chunks):
+                    input_ids = self.tokenizer(chunk, return_tensors="pt", return_attention_mask=False, return_token_type_ids=False, add_special_tokens=False)["input_ids"]
+
+                    if self.return_logits:
+                        out = self.model(input_ids=input_ids.to(device), output_hidden_states=False, return_dict=True)['logits'].detach().cpu().numpy()
+
+                    elif self.return_loss:
+                        out = self.model(input_ids=input_ids.to(device), output_hidden_states=False, return_dict=True)['logits'] # (1, seq_len, 16)
+                        out = out[:, :, 7: 12] # 0-6 are special tokens. vocab_size is only 12 so last 4 dimensions are dead.
+                        targets = input_ids - 7 # shift to 0-indexed
+                        out = torch.nn.functional.cross_entropy(out.view(-1, out.size(-1)), targets.view(-1).to(device), reduction='none')
+                        out = out.unsqueeze(0).detach().cpu().numpy() # dim 0 gets lost because of view
+
+                    else:
+                        out = self.model(input_ids = input_ids.to(device), output_hidden_states=True)['hidden_states'][-1].detach().cpu().numpy()
+                    
+                    embedded_chunks.append(out)
+
+                embedding = np.concatenate(embedded_chunks, axis=1)
+                embeddings.append(embedding)
+
+        return embeddings
+
 
 # Class for one-hot encoding.
 categories_4_letters_unknown = ['A', 'C', 'G', 'N', 'T']
@@ -1220,7 +1320,7 @@ class EncodeSequence:
             sequence = np.argmax(sequence, axis=-1)
         return sequence
 
-    
+
 # backward compatibility
 def embed_dnabert(sequences, path: str, kmer: int = 3, disable_tqdm = False):
     return DNABertEmbedder(path, kmer).embed(sequences, disable_tqdm = disable_tqdm)
