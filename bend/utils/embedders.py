@@ -327,7 +327,9 @@ class NucleotideTransformerEmbedder(BaseEmbedder):
         return_logits : bool, optional
             Whether to return the logits. Note that we do not apply any masking. Defaults to False.
         return_loss : bool, optional
-            Whether to return the loss. Note that we do not apply any masking. Defaults to False.
+            Whether to return the loss. Note that we do not apply any masking. ``remove_special_tokens`` also ignores these dimensions when
+            computing the loss.
+            Defaults to False.
         """
 
         if return_logits and return_loss:
@@ -388,7 +390,9 @@ class NucleotideTransformerEmbedder(BaseEmbedder):
                             outs = []
                             for item in split:
                                 out = self.model(item)['logits'].detach()
-                                out = torch.nn.functional.cross_entropy(out.view(-1, self.model.config.vocab_size), item.view(-1).to(torch.long), reduction='none')
+                                out = out[:,1:,4:-2 ] if remove_special_tokens else out # unk, pad, mask,cls , ... actual tokens ... eos, bos
+                                item_subset = item[:,1:] - 4 if remove_special_tokens else item # remove special tokens
+                                out = torch.nn.functional.cross_entropy(out.view(-1, out.shape[-1]), item_subset.view(-1).to(torch.long), reduction='none')
                                 out = out.unsqueeze(0).detach().cpu().numpy()
                                 outs.append(out)
                         else:
@@ -399,15 +403,25 @@ class NucleotideTransformerEmbedder(BaseEmbedder):
                             outs = self.model(tokens_ids)['logits'].detach().cpu().numpy()
                         elif self.return_loss:
                             outs = self.model(tokens_ids)['logits'].detach()#.cpu().numpy()
-                            outs = torch.nn.functional.cross_entropy(outs.view(-1, self.model.config.vocab_size), tokens_ids.view(-1).to(torch.long), reduction='none')
+                            outs = outs[:,1:,4:-2 ] if remove_special_tokens else outs # unk, pad, mask,cls , ... actual tokens ... eos, bos
+                            tokens_ids_subset = tokens_ids[:,1:] - 4 if remove_special_tokens else tokens_ids
+                            outs = torch.nn.functional.cross_entropy(outs.view(-1, outs.shape[-1]), tokens_ids_subset.view(-1).to(torch.long), reduction='none')
                             outs = outs.unsqueeze(0).detach().cpu().numpy()
                         else:
                             outs = self.model(tokens_ids, output_hidden_states=True)['hidden_states'][-1].detach().cpu().numpy()
 
-                    if upsample_embeddings:
+                    if upsample_embeddings and not (self.return_loss and remove_special_tokens):
                         outs = self._repeat_embedding_vectors(self.tokenizer.convert_ids_to_tokens(tokens_ids[0]), outs)
-                    embedded_seq.append(outs[:,1:] if remove_special_tokens else outs)
-                    #print('chunk', n_chunk, 'chunk length', len(chunk), 'tokens length', len(tokens_ids[0]), 'chunk embedded shape', outs.shape)
+                    elif upsample_embeddings and (self.return_loss and remove_special_tokens):
+                        # special case - we already had to remove special tokens before when computing outs.
+                        outs = self._repeat_embedding_vectors(self.tokenizer.convert_ids_to_tokens(tokens_ids[0,1:]), outs, has_special_tokens=False)
+                    
+                    if self.return_loss and remove_special_tokens:
+                        # again, cls is already removed.
+                        embedded_seq.append(outs)
+                    else:
+                        embedded_seq.append(outs[:,1:] if remove_special_tokens else outs)
+
                 embeddings.append(np.concatenate(embedded_seq, axis=1)) 
 
         return embeddings
