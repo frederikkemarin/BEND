@@ -27,6 +27,7 @@ from bend.models.dilated_cnn import ConvNetModel
 from bend.models.gena_lm import BertModel as GenaLMBertModel
 from bend.models.hyena_dna import HyenaDNAPreTrainedModel, CharacterTokenizer
 from bend.models.dnabert2 import BertModel as DNABert2BertModel
+from bend.models.dnabert2 import BertForMaskedLM as DNABert2BertForMaskedLM
 from bend.utils.download import download_model, download_model_zenodo
 
 from tqdm.auto import tqdm
@@ -402,8 +403,8 @@ class NucleotideTransformerEmbedder(BaseEmbedder):
                         if self.return_logits:
                             outs = self.model(tokens_ids)['logits'].detach().cpu().numpy()
                         elif self.return_loss:
-                            outs = self.model(tokens_ids)['logits'].detach()#.cpu().numpy()
-                            outs = outs[:,1:,4:-2 ] if remove_special_tokens else outs # unk, pad, mask,cls , ... actual tokens ... eos, bos
+                            outs = self.model(tokens_ids)['logits'].detach() # NOTE only is shape 4105, even though vocab_size is 4106
+                            outs = outs[:,1:,4:-1] if remove_special_tokens else outs # unk, pad, mask,cls , ... actual tokens ... eos, bos
                             tokens_ids_subset = tokens_ids[:,1:] - 4 if remove_special_tokens else tokens_ids
                             outs = torch.nn.functional.cross_entropy(outs.view(-1, outs.shape[-1]), tokens_ids_subset.view(-1).to(torch.long), reduction='none')
                             outs = outs.unsqueeze(0).detach().cpu().numpy()
@@ -864,7 +865,7 @@ class DNABert2Embedder(BaseEmbedder):
     """
     Embed using the DNABERT2 model https://arxiv.org/pdf/2306.15006.pdf
     """
-    def load_model(self, model_name = "zhihan1996/DNABERT-2-117M", **kwargs):
+    def load_model(self, model_name = "zhihan1996/DNABERT-2-117M", return_logits: bool = False, return_loss: bool = False, **kwargs):
         """
         Load the DNABERT2 model.
 
@@ -874,17 +875,26 @@ class DNABert2Embedder(BaseEmbedder):
             The name of the model to load. Defaults to "zhihan1996/DNABERT-2-117M".
             When providing a name, the model will be loaded from the HuggingFace model hub.
             Alternatively, you can provide a path to a local model directory.
+        return_logits : bool, optional
+            If True, returns logits instead of embeddings. Defaults to False.
+        return_loss : bool, optional
+            If True, returns the unreduced next token prediction loss. Incompatible with return_logits. If ``remove_special_tokens`` is True,
+            the loss is only computed on the BPE vocabulary without the special tokens.
+            Defaults to False.
         """
 
 
         # keep the source in this repo to avoid using flash attn. 
-        self.model = DNABert2BertModel.from_pretrained(model_name)
+        self.model = DNABert2BertForMaskedLM.from_pretrained(model_name)
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
         self.model.eval()
         self.model.to(device)
 
         # https://github.com/Zhihan1996/DNABERT_2/issues/2
         self.max_length = 10000 #nucleotides.
+
+        self.return_logits = return_logits
+        self.return_loss = return_loss
 
 
     def embed(self, sequences: List[str], disable_tqdm: bool = False, remove_special_tokens: bool = True, upsample_embeddings: bool = False):
@@ -922,11 +932,20 @@ class DNABert2Embedder(BaseEmbedder):
                     #print(n_chunk)
 
                     input_ids = self.tokenizer(chunk, return_tensors="pt", return_attention_mask=False, return_token_type_ids=False)["input_ids"]
-                    #print(input_ids.shape)
-                    output = self.model(input_ids.to(device))[0].detach().cpu().numpy()
-
-                    if upsample_embeddings:
+                    
+                    if self.return_logits:
+                        output = self.model(input_ids.to(device))['logits'].detach().cpu().numpy()
+                    elif self.return_loss:
+                        output = self.model(input_ids.to(device))['logits'].detach() # (1, len, 4096)
+                        output = output[:,1:-1, 5:] if remove_special_tokens else output # remove CLS and SEP, cut dimensions ['[UNK]', '[CLS]', '[SEP]', '[PAD]', '[MASK]', ...
+                        input_ids_shifted = input_ids[:,1:-1] - 5 if remove_special_tokens else input_ids # remove CLS and SEP, shift to 0-indexed
+                        output = torch.nn.functional.cross_entropy(output.view(-1, output.shape[-1]), input_ids_shifted.view(-1).to(torch.long).to(device), reduction='none').cpu().unsqueeze(0).numpy()
+                    else:
+                        output = self.model(input_ids.to(device), output_hidden_states=True)['hidden_states'][-1].detach().cpu().numpy()
+                    if upsample_embeddings and not (self.return_loss and remove_special_tokens):
                         output = self._repeat_embedding_vectors(self.tokenizer.convert_ids_to_tokens(input_ids[0]), output)
+                    elif upsample_embeddings and (self.return_loss and remove_special_tokens):
+                        output = self._repeat_embedding_vectors(self.tokenizer.convert_ids_to_tokens(input_ids[0,1:-1]), output, has_special_tokens=False)
 
                     # for intermediate chunks the special tokens need to go.
                     # if we only have 1 chunk, keep them for now.
@@ -942,7 +961,7 @@ class DNABert2Embedder(BaseEmbedder):
 
                 embedding = np.concatenate(embedded_chunks, axis=1)
 
-                if remove_special_tokens:
+                if remove_special_tokens and not self.return_loss:
                     embedding = embedding[:,1:-1]
 
                 embeddings.append(embedding)
