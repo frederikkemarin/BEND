@@ -27,6 +27,7 @@ from bend.models.dilated_cnn import ConvNetModel
 from bend.models.gena_lm import BertModel as GenaLMBertModel
 from bend.models.hyena_dna import HyenaDNAPreTrainedModel, CharacterTokenizer
 from bend.models.dnabert2 import BertModel as DNABert2BertModel
+from bend.models.dnabert2 import BertForMaskedLM as DNABert2BertForMaskedLM
 from bend.utils.download import download_model, download_model_zenodo
 
 from tqdm.auto import tqdm
@@ -40,7 +41,6 @@ logging.set_verbosity_error()
 # https://github.com/huggingface/transformers/blob/main/src/transformers/utils/hub.py
 
 device =  torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 
 ##
 ## GPN https://www.biorxiv.org/content/10.1101/2022.08.22.504706v1
@@ -314,7 +314,7 @@ class NucleotideTransformerEmbedder(BaseEmbedder):
     Embed using the Nuclieotide Transformer (NT) model https://www.biorxiv.org/content/10.1101/2023.01.11.523679v2.full
     """
 
-    def load_model(self, model_name, **kwargs):
+    def load_model(self, model_name, return_logits: bool = False, return_loss: bool = False, **kwargs):
         """
         Load the Nuclieotide Transformer (NT) model.
 
@@ -325,7 +325,16 @@ class NucleotideTransformerEmbedder(BaseEmbedder):
             When providing a name, the model will be loaded from the HuggingFace model hub.
             Alternatively, you can provide a path to a local model directory. We check whether the model_name
             contains 'v2' to determine whether we need to follow the V2 model API or not.
+        return_logits : bool, optional
+            Whether to return the logits. Note that we do not apply any masking. Defaults to False.
+        return_loss : bool, optional
+            Whether to return the loss. Note that we do not apply any masking. ``remove_special_tokens`` also ignores these dimensions when
+            computing the loss.
+            Defaults to False.
         """
+
+        if return_logits and return_loss:
+            raise ValueError('Only one of return_logits and return_loss can be True.')
 
         # Get pretrained model
         if 'v2' in model_name:
@@ -333,16 +342,16 @@ class NucleotideTransformerEmbedder(BaseEmbedder):
             self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
             self.max_seq_len = 12282 # "model_max_length": 2048, --> 12,288
             self.max_tokens = 2048
-            self.v2 = True
         else:
-            self.model = AutoModel.from_pretrained(model_name)
+            self.model = AutoModelForMaskedLM.from_pretrained(model_name)
             self.tokenizer = AutoTokenizer.from_pretrained(model_name)
             self.max_seq_len = 5994 # "model_max_length": 1000, 6-mer --> 6000
             self.max_tokens = 1000
-            self.v2 = False
         self.model.to(device)
         self.model.eval()
 
+        self.return_logits = return_logits
+        self.return_loss = return_loss
 
     def embed(self, sequences: List[str], disable_tqdm: bool = False, remove_special_tokens: bool = True, upsample_embeddings: bool = False):
         """
@@ -376,21 +385,44 @@ class NucleotideTransformerEmbedder(BaseEmbedder):
                     tokens_ids = self.tokenizer(chunk, return_tensors = 'pt')['input_ids'].int().to(device)
                     if len(tokens_ids[0]) > self.max_tokens: # too long to fit into the model
                         split = torch.split(tokens_ids, self.max_tokens, dim=-1)
-                        if self.v2:
-                            outs = [self.model(item, output_hidden_states=True)['hidden_states'][-1].detach().cpu().numpy() for item in split]
+                        if self.return_logits:
+                            outs = [self.model(item)['logits'].detach().cpu().numpy() for item in split]
+                        elif self.return_loss:
+                            outs = []
+                            for item in split:
+                                out = self.model(item)['logits'].detach()
+                                out = out[:,1:,4:-2 ] if remove_special_tokens else out # unk, pad, mask,cls , ... actual tokens ... eos, bos
+                                item_subset = item[:,1:] - 4 if remove_special_tokens else item # remove special tokens
+                                out = torch.nn.functional.cross_entropy(out.view(-1, out.shape[-1]), item_subset.view(-1).to(torch.long), reduction='none')
+                                out = out.unsqueeze(0).detach().cpu().numpy()
+                                outs.append(out)
                         else:
-                            outs = [self.model(item)['last_hidden_state'].detach().cpu().numpy() for item in split]
+                            outs = [self.model(item, output_hidden_states=True)['hidden_states'][-1].detach().cpu().numpy() for item in split]
                         outs = np.concatenate(outs, axis=1)
                     else:
-                        if self.v2:
-                            outs = self.model(tokens_ids, output_hidden_states=True)['hidden_states'][-1].detach().cpu().numpy()
+                        if self.return_logits:
+                            outs = self.model(tokens_ids)['logits'].detach().cpu().numpy()
+                        elif self.return_loss:
+                            outs = self.model(tokens_ids)['logits'].detach() # NOTE only is shape 4105, even though vocab_size is 4106
+                            outs = outs[:,1:,4:-1] if remove_special_tokens else outs # unk, pad, mask,cls , ... actual tokens ... eos, bos
+                            tokens_ids_subset = tokens_ids[:,1:] - 4 if remove_special_tokens else tokens_ids
+                            outs = torch.nn.functional.cross_entropy(outs.view(-1, outs.shape[-1]), tokens_ids_subset.view(-1).to(torch.long), reduction='none')
+                            outs = outs.unsqueeze(0).detach().cpu().numpy()
                         else:
-                            outs = self.model(tokens_ids)['last_hidden_state'].detach().cpu().numpy() # get last hidden state
+                            outs = self.model(tokens_ids, output_hidden_states=True)['hidden_states'][-1].detach().cpu().numpy()
 
-                    if upsample_embeddings:
+                    if upsample_embeddings and not (self.return_loss and remove_special_tokens):
                         outs = self._repeat_embedding_vectors(self.tokenizer.convert_ids_to_tokens(tokens_ids[0]), outs)
-                    embedded_seq.append(outs[:,1:] if remove_special_tokens else outs)
-                    #print('chunk', n_chunk, 'chunk length', len(chunk), 'tokens length', len(tokens_ids[0]), 'chunk embedded shape', outs.shape)
+                    elif upsample_embeddings and (self.return_loss and remove_special_tokens):
+                        # special case - we already had to remove special tokens before when computing outs.
+                        outs = self._repeat_embedding_vectors(self.tokenizer.convert_ids_to_tokens(tokens_ids[0,1:]), outs, has_special_tokens=False)
+                    
+                    if self.return_loss and remove_special_tokens:
+                        # again, cls is already removed.
+                        embedded_seq.append(outs)
+                    else:
+                        embedded_seq.append(outs[:,1:] if remove_special_tokens else outs)
+
                 embeddings.append(np.concatenate(embedded_seq, axis=1)) 
 
         return embeddings
@@ -663,7 +695,7 @@ class GENALMEmbedder(BaseEmbedder):
 
 class HyenaDNAEmbedder(BaseEmbedder):
     '''Embed using the HyenaDNA model https://arxiv.org/abs/2306.15794'''
-    def load_model(self, model_path = 'pretrained_models/hyenadna/hyenadna-tiny-1k-seqlen', **kwargs):
+    def load_model(self, model_path = 'pretrained_models/hyenadna/hyenadna-tiny-1k-seqlen', return_logits: bool=False, return_loss: bool=False, **kwargs):
         # '''Load the model from the checkpoint path
         # 'hyenadna-tiny-1k-seqlen'   
         # 'hyenadna-small-32k-seqlen'
@@ -682,6 +714,12 @@ class HyenaDNAEmbedder(BaseEmbedder):
             If the path does not exist, the model will be downloaded from HuggingFace. Rather than just downloading the model,
             HyenaDNA's `from_pretrained` method relies on cloning the HuggingFace-hosted repository, and using git lfs to download the model.
             This requires git lfs to be installed on your system, and will fail if it is not.
+        return_logits : bool, optional
+            If True, returns logits instead of embeddings. Defaults to False.
+        return_loss : bool, optional
+            If True, returns the unreduced next token prediction loss. Incompatible with return_logits. We trim special tokens from the
+            output so that the loss is only computed on the ACTGN vocabulary.
+              Defaults to False.
 
         
         """
@@ -696,6 +734,12 @@ class HyenaDNAEmbedder(BaseEmbedder):
 
         self.max_length = max_lengths[model_name]  # auto selects
 
+        if return_logits and return_loss:
+            raise ValueError('Only one of return_logits and return_loss can be True')
+        
+        self.return_logits = return_logits
+        self.return_loss = return_loss
+
         # all these settings are copied directly from huggingface.py
 
         # data settings:
@@ -706,6 +750,8 @@ class HyenaDNAEmbedder(BaseEmbedder):
         # we need these for the decoder head, if using
         use_head = False
         n_classes = 2  # not used for embeddings only
+
+        use_lm_head = return_logits or return_loss # the head we added back in.
 
         # you can override with your own backbone config here if you want,
         # otherwise we'll load the HF one in None
@@ -720,8 +766,10 @@ class HyenaDNAEmbedder(BaseEmbedder):
             config=backbone_cfg,
             device=device,
             use_head=use_head,
+            use_lm_head=use_lm_head,
             n_classes=n_classes,
         )
+        model.eval()
 
         model.to(device)
         self.model = model
@@ -753,10 +801,11 @@ class HyenaDNAEmbedder(BaseEmbedder):
         disable_tqdm : bool, optional
             Whether to disable the tqdm progress bar. Defaults to False.
         remove_special_tokens : bool, optional
-            Whether to remove the CLS and SEP tokens from the embeddings. Defaults to True.
+            Whether to remove the CLS and SEP tokens from the embeddings. Defaults to True. Cannot be set to False if
+            the return_loss option of the embedder is True (autoregression forces us to discard the BOS token position either way).
         upsample_embeddings : bool, optional
             Whether to upsample the embeddings to match the length of the input sequences. Defaults to False.
-            Only provided for compatibility with other embedders. GPN embeddings are already the same length as the input sequence.
+            Only provided for compatibility with other embedders. HyenaDNA embeddings are already the same length as the input sequence.
         Returns
         -------
 
@@ -764,31 +813,42 @@ class HyenaDNAEmbedder(BaseEmbedder):
             List of embeddings.
         '''
 
-
-    # # prep model and forward
-    # model.to(device)
-    #             with torch.inference_mode():
-
         embeddings = [] 
         with torch.inference_mode():
             for s in tqdm(sequences, disable=disable_tqdm):
                 chunks = [s[chunk : chunk + self.max_length] for chunk in  range(0, len(s), self.max_length)] # split into chunks
                 embedded_chunks = []
                 for n_chunk, chunk in enumerate(chunks):
+                    # reference: https://colab.research.google.com/drive/1wyVEQd4R3HYLTUOXEEQmp_I8aNC_aLhL?usp=sharing#scrollTo=-1wq2uwUctPV
                     #### Single embedding example ####
 
                     # create a sample 450k long, prepare
                     # sequence = 'ACTG' * int(self.max_length/4)
-                    tok_seq = self.tokenizer(chunk) # adds CLS and SEP tokens
+                    tok_seq = self.tokenizer(chunk) # adds CLS and SEP tokens (0=CLS, 1=EOS)
                     tok_seq = tok_seq["input_ids"]  # grab ids
 
                     # place on device, convert to tensor
                     tok_seq = torch.LongTensor(tok_seq).unsqueeze(0)  # unsqueeze for batch dim
                     tok_seq = tok_seq.to(device)
 
-
                     output = self.model(tok_seq)
-                    if remove_special_tokens:
+
+
+                    if self.return_loss and remove_special_tokens:
+                        # vocab:
+                        # {0: '[CLS]', 1: '[SEP]', 2: '[BOS]', 3: '[MASK]', 4: '[PAD]', 5: '[RESERVED]', 6: '[UNK]', 7: 'A', 8: 'C', 9: 'G', 10: 'T', 11: 'N'}
+                        output = output[:, :,7: 12]
+                        shift_logits = output[..., :-2, :].contiguous() # remove EOS and last AA
+                        shift_labels = tok_seq[..., 1:-1] # remove BOS and EOS
+                        shift_labels = shift_labels - 7 # shift to 0-indexed
+                        loss = torch.nn.functional.cross_entropy(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1), reduction='none')
+                        output = loss.unsqueeze(0) # dim 0 gets lost because of view
+
+
+                    elif self.return_loss and not remove_special_tokens:
+                        raise ValueError('return_loss is incompatible with remove_special_tokens=False. We always remove EOS and BOS tokens to calculate the loss.')
+                    
+                    elif remove_special_tokens:
                         output = output[:,1:-1]
 
                     embedded_chunks.append(output.detach().cpu().numpy())
@@ -799,14 +859,13 @@ class HyenaDNAEmbedder(BaseEmbedder):
 
         return embeddings
 
-    # print(embeddings.shape)  # embeddings here!
 
 
 class DNABert2Embedder(BaseEmbedder):
     """
     Embed using the DNABERT2 model https://arxiv.org/pdf/2306.15006.pdf
     """
-    def load_model(self, model_name = "zhihan1996/DNABERT-2-117M", **kwargs):
+    def load_model(self, model_name = "zhihan1996/DNABERT-2-117M", return_logits: bool = False, return_loss: bool = False, **kwargs):
         """
         Load the DNABERT2 model.
 
@@ -816,17 +875,26 @@ class DNABert2Embedder(BaseEmbedder):
             The name of the model to load. Defaults to "zhihan1996/DNABERT-2-117M".
             When providing a name, the model will be loaded from the HuggingFace model hub.
             Alternatively, you can provide a path to a local model directory.
+        return_logits : bool, optional
+            If True, returns logits instead of embeddings. Defaults to False.
+        return_loss : bool, optional
+            If True, returns the unreduced next token prediction loss. Incompatible with return_logits. If ``remove_special_tokens`` is True,
+            the loss is only computed on the BPE vocabulary without the special tokens.
+            Defaults to False.
         """
 
 
         # keep the source in this repo to avoid using flash attn. 
-        self.model = DNABert2BertModel.from_pretrained(model_name)
+        self.model = DNABert2BertForMaskedLM.from_pretrained(model_name)
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
         self.model.eval()
         self.model.to(device)
 
         # https://github.com/Zhihan1996/DNABERT_2/issues/2
         self.max_length = 10000 #nucleotides.
+
+        self.return_logits = return_logits
+        self.return_loss = return_loss
 
 
     def embed(self, sequences: List[str], disable_tqdm: bool = False, remove_special_tokens: bool = True, upsample_embeddings: bool = False):
@@ -864,11 +932,20 @@ class DNABert2Embedder(BaseEmbedder):
                     #print(n_chunk)
 
                     input_ids = self.tokenizer(chunk, return_tensors="pt", return_attention_mask=False, return_token_type_ids=False)["input_ids"]
-                    #print(input_ids.shape)
-                    output = self.model(input_ids.to(device))[0].detach().cpu().numpy()
-
-                    if upsample_embeddings:
+                    
+                    if self.return_logits:
+                        output = self.model(input_ids.to(device))['logits'].detach().cpu().numpy()
+                    elif self.return_loss:
+                        output = self.model(input_ids.to(device))['logits'].detach() # (1, len, 4096)
+                        output = output[:,1:-1, 5:] if remove_special_tokens else output # remove CLS and SEP, cut dimensions ['[UNK]', '[CLS]', '[SEP]', '[PAD]', '[MASK]', ...
+                        input_ids_shifted = input_ids[:,1:-1] - 5 if remove_special_tokens else input_ids # remove CLS and SEP, shift to 0-indexed
+                        output = torch.nn.functional.cross_entropy(output.view(-1, output.shape[-1]), input_ids_shifted.view(-1).to(torch.long).to(device), reduction='none').cpu().unsqueeze(0).numpy()
+                    else:
+                        output = self.model(input_ids.to(device), output_hidden_states=True)['hidden_states'][-1].detach().cpu().numpy()
+                    if upsample_embeddings and not (self.return_loss and remove_special_tokens):
                         output = self._repeat_embedding_vectors(self.tokenizer.convert_ids_to_tokens(input_ids[0]), output)
+                    elif upsample_embeddings and (self.return_loss and remove_special_tokens):
+                        output = self._repeat_embedding_vectors(self.tokenizer.convert_ids_to_tokens(input_ids[0,1:-1]), output, has_special_tokens=False)
 
                     # for intermediate chunks the special tokens need to go.
                     # if we only have 1 chunk, keep them for now.
@@ -884,7 +961,7 @@ class DNABert2Embedder(BaseEmbedder):
 
                 embedding = np.concatenate(embedded_chunks, axis=1)
 
-                if remove_special_tokens:
+                if remove_special_tokens and not self.return_loss:
                     embedding = embedding[:,1:-1]
 
                 embeddings.append(embedding)
@@ -1086,6 +1163,104 @@ class GROVEREmbedder(BaseEmbedder):
         return new_embeddings
 
 
+class CaduceusEmbedder(BaseEmbedder):
+
+    def load_model(self, model_name: str = "kuleshov-group/caduceus-ph_seqlen-131k_d_model-256_n_layer-16", return_logits: bool=False, return_loss: bool=False, **kwargs):
+        """
+        Load the Caduceus model (https://arxiv.org/abs/2403.03234).
+
+        Parameters
+        ----------
+        model_name : str, optional
+            The name of the model to load. Defaults to "kuleshov-group/caduceus-ph_seqlen-131k_d_model-256_n_layer-16".
+            When providing a name, the model will be loaded from the HuggingFace model hub.
+            Alternatively, you can provide a path to a local model directory.
+        return_logits : bool, optional
+            If True, returns logits instead of embeddings. Defaults to False.
+        return_loss : bool, optional
+            If True, returns the unreduced next token prediction loss. Incompatible with return_logits. 
+            We trim special tokens from the output so that the loss is only computed on the ACTGN vocabulary.
+              Defaults to False.
+
+        
+        """
+        # check that we have mamba-ssm==1.2.0.post1
+        try:
+            import mamba_ssm
+        except ImportError:
+            raise ImportError('Caduceus requires mamba-ssm==1.2.0.post1. Please install it with `pip install mamba-ssm==1.2.0.post1`.')
+        if mamba_ssm.__version__ != '1.2.0.post1':
+            raise ImportError('Caduceus requires mamba-ssm==1.2.0.post1. Please install it with `pip install mamba-ssm==1.2.0.post1`.')
+        
+
+        if return_logits and return_loss:
+            raise ValueError('Only one of return_logits and return_loss can be True')
+
+        self.max_length = 131072
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+        self.model = AutoModelForMaskedLM.from_pretrained(model_name, trust_remote_code=True)
+        self.model.eval()
+        self.model.to(device)
+
+        self.return_logits = return_logits
+        self.return_loss = return_loss
+
+    def embed(self, sequences: List[str], disable_tqdm: bool = False, remove_special_tokens: bool = True, upsample_embeddings: bool = False):
+        """
+        Embed sequences using the Caduceus model.
+
+        Parameters
+        ----------
+        sequences : List[str]
+            List of sequences to embed.
+        disable_tqdm : bool, optional
+            Whether to disable the tqdm progress bar. Defaults to False.
+        remove_special_tokens : bool, optional
+            Whether to remove the CLS and SEP tokens from the embeddings. Defaults to True. Only provided for compatibility with other embedders.
+        upsample_embeddings : bool, optional
+            Whether to upsample the embeddings to match the length of the input sequences. Defaults to False. 
+            Only provided for compatibility with other embedders. Caduceus embeddings are already the same length as the input sequence.
+
+        Returns
+        -------
+        List[np.ndarray]
+            List of embeddings.
+        """
+        ref_tokenized = self.tokenizer.batch_encode_plus(
+        sequences,
+        add_special_tokens=False,
+        return_attention_mask=False,
+        max_length=self.max_length,
+        truncation=True,
+        )
+        embeddings = []
+        with torch.no_grad():
+            for sequence in tqdm(sequences, disable=disable_tqdm):
+                chunks = [sequence[chunk : chunk + self.max_length] for chunk in  range(0, len(sequence), self.max_length)]
+                embedded_chunks = []
+                for n_chunk, chunk in enumerate(chunks):
+                    input_ids = self.tokenizer(chunk, return_tensors="pt", return_attention_mask=False, return_token_type_ids=False, add_special_tokens=False)["input_ids"]
+
+                    if self.return_logits:
+                        out = self.model(input_ids=input_ids.to(device), output_hidden_states=False, return_dict=True)['logits'].detach().cpu().numpy()
+
+                    elif self.return_loss:
+                        out = self.model(input_ids=input_ids.to(device), output_hidden_states=False, return_dict=True)['logits'] # (1, seq_len, 16)
+                        out = out[:, :, 7: 12] # 0-6 are special tokens. vocab_size is only 12 so last 4 dimensions are dead.
+                        targets = input_ids - 7 # shift to 0-indexed
+                        out = torch.nn.functional.cross_entropy(out.view(-1, out.size(-1)), targets.view(-1).to(device), reduction='none')
+                        out = out.unsqueeze(0).detach().cpu().numpy() # dim 0 gets lost because of view
+
+                    else:
+                        out = self.model(input_ids = input_ids.to(device), output_hidden_states=True)['hidden_states'][-1].detach().cpu().numpy()
+                    
+                    embedded_chunks.append(out)
+
+                embedding = np.concatenate(embedded_chunks, axis=1)
+                embeddings.append(embedding)
+
+        return embeddings
+
 
 # Class for one-hot encoding.
 categories_4_letters_unknown = ['A', 'C', 'G', 'N', 'T']
@@ -1178,7 +1353,7 @@ class EncodeSequence:
             sequence = np.argmax(sequence, axis=-1)
         return sequence
 
-    
+
 # backward compatibility
 def embed_dnabert(sequences, path: str, kmer: int = 3, disable_tqdm = False):
     return DNABertEmbedder(path, kmer).embed(sequences, disable_tqdm = disable_tqdm)

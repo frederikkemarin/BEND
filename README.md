@@ -74,7 +74,8 @@ Embedders have a default-true argument `remove_special_tokens=True` in `embed()`
 |GENALMEmbedder | [Fishman et al.](https://www.biorxiv.org/content/10.1101/2023.06.12.544594v1) |[8 different models available](https://huggingface.co/AIRI-Institute) | |
 |HyenaDNAEmbedder | [Nguyen et al.](https://arxiv.org/abs/2306.15794) | [5 different models available](https://huggingface.co/LongSafari) | Experimental integration. Requires Git LFS to be installed to automatically download checkpoints. Instead of the HF checkpoint name, the argument when instantiating needs to be of the format `path/to/save/checkpoints/checkpoint_name` |
 |DNABert2Embedder | [Zhou et al.](https://arxiv.org/pdf/2306.15006v1.pdf) | [1 model available](https://huggingface.co/zhihan1996/DNABERT-2-117M) | |
-|GROVEREmbedder | [Sanabria et al.](https://www.biorxiv.org/content/10.1101/2023.07.19.549677v2) | [1 model available](https://zenodo.org/records/8373117) | The original BPE tokenizer is not available, so we apply MaxMatch for segmentation of the input sequence into tokens.|
+|GROVEREmbedder | [Sanabria et al.](https://www.nature.com/articles/s42256-024-00872-0) | [1 model available](https://zenodo.org/records/8373117) | The original BPE tokenizer is not available, so we apply MaxMatch for segmentation of the input sequence into tokens.|
+|CaduceusEmbedder | [Schiff et al.](https://arxiv.org/abs/2403.03234) | [2 different models available](https://github.com/kuleshov-group/caduceus/) | Requires `mamba-ssm==1.2.0.post1` to be installed in the environment. |
 
 All embedders can be used as follows:
 ```python
@@ -342,5 +343,5 @@ Model | Upsampling strategy
 --- | ---
 DNABert | The overlapping k-mer tokenization strategy of DNABert causes some "missing embeddings" at the start and the end of the input sequence, as there is no context to build the k-mer tokens from. For `k=3`, we repeat the first and the last embedding vectors once. For `k=4`, we repeat the first once and the last twice. For `k=5`, we repeat the first and the last twice. For `k=6`, we repeat the first twice and the last three times. 
 Nucleotide Transformer | Due to 6-mer tokenization, each embedding is repeated 6 times. Remainder tokens are single nucleotides and left as-is.
-GENA-LM, DNABERT-2 | BPE tokens have variable length. We repeat each embedding vector to the length of the sequence represented by its token.
+GENA-LM, DNABERT-2, GROVER | BPE tokens have variable length. We repeat each embedding vector to the length of the sequence represented by its token.
 

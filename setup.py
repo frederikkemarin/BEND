@@ -16,6 +16,6 @@ setup(
     long_description_content_type="text/markdown",
     author="Anonymous",
     packages=find_packages(),
-    python_requires=">=3.6, <=3.11",
+    python_requires=">=3.6, <=3.11.9",
     install_requires=requirements,
 )

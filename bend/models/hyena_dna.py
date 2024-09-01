@@ -876,7 +876,7 @@ class HyenaDNAModel(nn.Module):
                  layer=None, attn_layer_idx=None, attn_cfg=None, max_position_embeddings=0,
                  resid_dropout: float = 0.0, embed_dropout: float = 0.1,
                  layer_norm_epsilon: float = 1e-5, initializer_cfg=None,residual_in_fp32=False,
-                 pad_vocab_size_multiple: int = 1, use_head=False, n_classes: int = 2,
+                 pad_vocab_size_multiple: int = 1, use_head=False, n_classes: int = 2, use_lm_head=False,
                  device=None, dtype=None, **kwargs) -> None:
         factory_kwargs = {'device': device, 'dtype': dtype}
         super().__init__()
@@ -884,6 +884,7 @@ class HyenaDNAModel(nn.Module):
             vocab_size += pad_vocab_size_multiple - (vocab_size % pad_vocab_size_multiple)
 
         self.use_head = use_head
+        self.use_lm_head = use_lm_head
 
         # check if layer (config) has d_model (HF code differs from main Safari code)
         if 'd_model' not in layer:
@@ -898,6 +899,11 @@ class HyenaDNAModel(nn.Module):
             initializer_cfg=initializer_cfg, residual_in_fp32=residual_in_fp32,
             **factory_kwargs, **kwargs
         )
+
+        # Felix Aug 2024: add language modeling head - it's part of the HF checkpoint, but not supported by default
+        # compare https://github.com/HazyResearch/hyena-dna/blob/main/src/models/sequence/long_conv_lm.py#L460
+        # https://github.com/HazyResearch/hyena-dna/blob/main/evals/hg38_inference.py
+        self.lm_head = nn.Linear(d_model, vocab_size, bias=False, **factory_kwargs)
 
         # we only need a head if doing classification, otherwise we'll use the
         # hidden states as embeddings
@@ -919,6 +925,8 @@ class HyenaDNAModel(nn.Module):
 
         if self.use_head:
             return self.head(hidden_states)
+        elif self.use_lm_head:
+            return self.lm_head(hidden_states)
         else:
             return hidden_states
 
@@ -1120,6 +1128,9 @@ def load_weights(scratch_dict, pretrained_dict, checkpointing=False):
                 scratch_dict[key] = pretrained_dict[key_loaded]
             except:
                 raise Exception('key mismatch in the state dicts!')
+    
+    # force this so that we fail if the lm_head is not present
+    scratch_dict['lm_head.weight'] = pretrained_dict['model.lm_head.weight']
 
     # scratch_dict has been updated
     return scratch_dict
@@ -1146,6 +1157,7 @@ class HyenaDNAPreTrainedModel(PreTrainedModel):
                         config=None,
                         device='cpu',
                         use_head=False,
+                        use_lm_head=False,
                         n_classes=2,
                       ):
         
@@ -1167,7 +1179,10 @@ class HyenaDNAPreTrainedModel(PreTrainedModel):
             if config is None:
                 config = json.load(open(os.path.join(pretrained_model_name_or_path, 'config.json')))
 
-        scratch_model = HyenaDNAModel(**config, use_head=use_head, n_classes=n_classes)  # the new model format
+        if use_head and use_lm_head:
+            raise ValueError("Can't use both head and lm_head at the same time.")
+
+        scratch_model = HyenaDNAModel(**config, use_head=use_head, use_lm_head=use_lm_head, n_classes=n_classes)  # the new model format
         loaded_ckpt = torch.load(
             os.path.join(pretrained_model_name_or_path, 'weights.ckpt'),
             map_location=torch.device(device)
