@@ -929,7 +929,6 @@ class DNABert2Embedder(BaseEmbedder):
 
                 embedded_chunks = []
                 for n_chunk, chunk in enumerate(chunks):
-                    #print(n_chunk)
 
                     input_ids = self.tokenizer(chunk, return_tensors="pt", return_attention_mask=False, return_token_type_ids=False)["input_ids"]
                     
@@ -937,8 +936,15 @@ class DNABert2Embedder(BaseEmbedder):
                         output = self.model(input_ids.to(device))['logits'].detach().cpu().numpy()
                     elif self.return_loss:
                         output = self.model(input_ids.to(device))['logits'].detach() # (1, len, 4096)
-                        output = output[:,1:-1, 5:] if remove_special_tokens else output # remove CLS and SEP, cut dimensions ['[UNK]', '[CLS]', '[SEP]', '[PAD]', '[MASK]', ...
-                        input_ids_shifted = input_ids[:,1:-1] - 5 if remove_special_tokens else input_ids # remove CLS and SEP, shift to 0-indexed
+                        dim_to_remove = [1, 2, 3, 4]  # indices for '[CLS]', '[SEP]', '[PAD]', '[MASK]'. We preserve UNK at 0.
+                        mask = torch.ones(output.shape[2], dtype=bool)  # create a mask of True values
+                        mask[dim_to_remove] = False  # set the dimensions you want to remove to False
+                        output = output[:,1:-1,mask] if remove_special_tokens else output # remove CLS and SEP, cut dimensions ['[CLS]', '[SEP]', '[PAD]', '[MASK]', ...
+                        
+                        # shift and offset input_ids
+                        greater_than_4 = input_ids > 4
+                        input_ids_shifted = input_ids - 4 * greater_than_4 # Subtract 4 from the tokens that are greater than 4
+                        input_ids_shifted = input_ids_shifted[:,1:-1] if remove_special_tokens else input_ids # remove CLS and SEP, shift to 0-indexed
                         output = torch.nn.functional.cross_entropy(output.view(-1, output.shape[-1]), input_ids_shifted.view(-1).to(torch.long).to(device), reduction='none').cpu().unsqueeze(0).numpy()
                     else:
                         output = self.model(input_ids.to(device), output_hidden_states=True)['hidden_states'][-1].detach().cpu().numpy()
