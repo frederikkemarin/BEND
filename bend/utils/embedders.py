@@ -342,11 +342,13 @@ class NucleotideTransformerEmbedder(BaseEmbedder):
             self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
             self.max_seq_len = 12282 # "model_max_length": 2048, --> 12,288
             self.max_tokens = 2048
+            self.is_v2 = True
         else:
             self.model = AutoModelForMaskedLM.from_pretrained(model_name)
             self.tokenizer = AutoTokenizer.from_pretrained(model_name)
             self.max_seq_len = 5994 # "model_max_length": 1000, 6-mer --> 6000
             self.max_tokens = 1000
+            self.is_v2 = False
         self.model.to(device)
         self.model.eval()
 
@@ -403,9 +405,16 @@ class NucleotideTransformerEmbedder(BaseEmbedder):
                         if self.return_logits:
                             outs = self.model(tokens_ids)['logits'].detach().cpu().numpy()
                         elif self.return_loss:
-                            outs = self.model(tokens_ids)['logits'].detach() # NOTE only is shape 4105, even though vocab_size is 4106
-                            outs = outs[:,1:,4:-1] if remove_special_tokens else outs # unk, pad, mask,cls , ... actual tokens ... eos, bos
-                            tokens_ids_subset = tokens_ids[:,1:] - 4 if remove_special_tokens else tokens_ids
+                            outs = self.model(tokens_ids)['logits'].detach() # NOTE  in V1 only is shape 4105, even though vocab_size is 4107. Correct in V2.
+                            # NOTE order in V1: unk, pad, mask,cls , ... actual tokens ... eos, bos  --> last 2 tokens are not used in the model.
+                            # in V2: unk, pad, mask,cls , eos, bos, ... actual tokens
+                            if self.is_v2:
+                                outs = outs[:,1:,6:] if remove_special_tokens else outs
+                                tokens_ids_subset = tokens_ids[:,1:] - 6 if remove_special_tokens else tokens_ids
+                            else:
+                                outs = outs[:,1:,4:] if remove_special_tokens else outs # unk, pad, mask,cls , ... actual tokens ... ( eos, bos)
+                                tokens_ids_subset = tokens_ids[:,1:] - 4 if remove_special_tokens else tokens_ids # token 4104 needs to be preseverd
+
                             outs = torch.nn.functional.cross_entropy(outs.view(-1, outs.shape[-1]), tokens_ids_subset.view(-1).to(torch.long), reduction='none')
                             outs = outs.unsqueeze(0).detach().cpu().numpy()
                         else:
