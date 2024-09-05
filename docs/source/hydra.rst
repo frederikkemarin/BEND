@@ -10,7 +10,7 @@ supervised models on new tasks and datasets, you can do so by creating new Hydra
 A Note 
 *********************
 Please be consistent in the naming of new tasks and embedders across the different configuration files. 
-This is required for the code to function correclty.
+This is required for the code to function correctly.
 
 Running new embedders
 *********************
