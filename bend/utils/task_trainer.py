@@ -230,7 +230,7 @@ class BaseTrainer:
         return 
     
     def _load_checkpoint(self, checkpoint):
-        checkpoint = torch.load(checkpoint,  map_location=self.device)
+        checkpoint = torch.load(checkpoint, map_location=self.device, weights_only=False)
         try:
             self.model.load_state_dict(checkpoint['model_state_dict'], strict=True)
         except:
