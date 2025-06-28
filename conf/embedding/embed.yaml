@@ -29,10 +29,11 @@ hydra :
       task: 
             gene_finding,
             enhancer_annotation,
-            variant_effects,
             histone_modification,
-            chromatin_accessibility
+            chromatin_accessibility,
             cpg_methylation
+            # variant_effects,
+            
 
 chunk_size : 50000
 chunk : null # can be given as a list of chunks to embed 
@@ -113,10 +114,10 @@ enhancer_annotation:
   hdf5_file : ${data_dir}/enhancer_annotation/enhancer_annotation.hdf5
   bed : ${data_dir}/enhancer_annotation/enhancer_annotation.bed
   read_strand : false
-variant_effects:
-  reference_fasta : ${data_dir}/genomes/GRCh38.primary_assembly.genome.fa
-  bed : ${data_dir}/variant_effects/variant_effects.bed
-  read_strand : false
+# variant_effects:
+#   reference_fasta : ${data_dir}/genomes/GRCh38.primary_assembly.genome.fa
+#   bed : ${data_dir}/variant_effects/variant_effects.bed
+#   read_strand : false
 histone_modification:
   bed : ${data_dir}/histone_modification/histone_modification.bed
   reference_fasta : ${data_dir}/genomes/GRCh38.primary_assembly.genome.fa

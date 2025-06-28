@@ -957,6 +957,8 @@ class DNABert2Embedder(BaseEmbedder):
                         output = torch.nn.functional.cross_entropy(output.view(-1, output.shape[-1]), input_ids_shifted.view(-1).to(torch.long).to(device), reduction='none').cpu().unsqueeze(0).numpy()
                     else:
                         output = self.model(input_ids.to(device), output_hidden_states=True)['hidden_states'][-1].detach().cpu().numpy()
+                        output = np.expand_dims(output, axis=0)
+                    
                     if upsample_embeddings and not (self.return_loss and remove_special_tokens):
                         output = self._repeat_embedding_vectors(self.tokenizer.convert_ids_to_tokens(input_ids[0]), output)
                     elif upsample_embeddings and (self.return_loss and remove_special_tokens):

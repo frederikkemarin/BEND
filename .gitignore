@@ -8,6 +8,9 @@ downstream_tasks/
 submit.sh
 multirun/
 nohup.out
+notebooks/
+results/
+results_variant_effects/
 
 # Byte-compiled / optimized / DLL files
 **/__pycache__/
