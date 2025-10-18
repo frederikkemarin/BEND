@@ -6,6 +6,7 @@ import bend.io.sequtils as sequtils
 import pandas as pd
 import numpy as np
 import sys
+
 # load config 
 @hydra.main(config_path="../conf/embedding/", config_name="embed", version_base=None)
 def run_experiment(cfg: DictConfig) -> None:
@@ -46,13 +47,19 @@ def run_experiment(cfg: DictConfig) -> None:
                 print(f'{chunk} is not a valid chunk id. {split} chunk ids are {possible_chunks}')
                 continue
             print(f'\t Embedding chunk {chunk} ({chunk +1}/{len(possible_chunks)})')
-            sequtils.embed_from_bed(**cfg[cfg.task], embedder = embedder, 
-                                        output_path = f'{output_dir}/{split}_{chunk}.tar.gz',
-                                        split = split, chunk = chunk, chunk_size = cfg.chunk_size,   
-                                        upsample_embeddings = cfg[cfg.model]['upsample_embeddings'] if 'upsample_embeddings' in cfg[cfg.model] else False)
-            
-            
-        
+            sequtils.embed_from_bed(
+                **cfg[cfg.task],
+                embedder=embedder,
+                output_path=f'{output_dir}/{split}_{chunk}.tar.gz',
+                split=split,
+                chunk=chunk,
+                chunk_size=cfg.chunk_size,   
+                upsample_embeddings=(
+                    cfg[cfg.model]['upsample_embeddings'] \
+                    if 'upsample_embeddings' in cfg[cfg.model] \
+                    else False
+                )
+            )
 
 if __name__ == '__main__':
     
