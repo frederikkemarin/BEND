@@ -11,3 +11,9 @@ torchvision
 hydra-joblib-launcher
 webdataset
 beautifulsoup4
+# Runtime dependencies used by data preparation and the pinned wandb release
+numpy<2
+setuptools<81
+h5py
+pysam
+lxml

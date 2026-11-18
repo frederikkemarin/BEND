@@ -4,10 +4,13 @@ download.py
 Utility functions for downloading pretrained models from the web.
 """
 
-import os 
+import os
+import subprocess
+import tempfile
+import shutil
 
 def download_model(model: str = 'convnet', 
-                   base_url: str = 'https://sid.erda.dk/share_redirect/dbQM0pgSlM/pretrained_models/',
+                   base_url: str = 'https://sid.erda.dk/share_redirect/aNQa0Oz2lY/pretrained_models/',
                    destination_dir : str = './pretrained_models/' # pretrained_models
                    ) -> None:
     """Download BEND pretrained model checkpoints from the ERDA URL. 
@@ -29,17 +32,16 @@ def download_model(model: str = 'convnet',
     None.
     """
     
-    # """download model from url to destination directory"""
-    # make destination directory if it doesn't exist
-    os.makedirs(destination_dir, exist_ok=True)
-    
-    
     files = ['config.json', 'pytorch_model.bin', 'special_tokens_map.json', 'tokenizer.json', 'tokenizer_config.json']
-    for file in files:
-        url = f'{base_url}{model}/{file}'
-        os.system(f'wget {url} -P {destination_dir}/')
+    # Do not leave a partial model directory behind if a download fails.
+    with tempfile.TemporaryDirectory() as staging:
+        for file in files:
+            url = f'{base_url.rstrip("/")}/{model}/{file}'
+            subprocess.run(['wget', '-O', os.path.join(staging, file), url], check=True)
+        os.makedirs(destination_dir, exist_ok=True)
+        for file in files:
+            shutil.move(os.path.join(staging, file), os.path.join(destination_dir, file))
 
-    return 
 
 
 def download_model_zenodo(base_url: str, destination_dir: str = './pretrained_models'):
