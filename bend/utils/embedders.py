@@ -470,13 +470,13 @@ class AWDLSTMEmbedder(BaseEmbedder):
         ----------
         model_path : str
             The path to the model directory.
-            If the model path does not exist, it will be downloaded from https://sid.erda.dk/cgi-sid/ls.py?share_id=dbQM0pgSlM&current_dir=pretrained_models&flags=f
+            If the model path does not exist, it will be downloaded from https://sid.erda.dk/cgi-sid/ls.py?share_id=aNQa0Oz2lY&current_dir=pretrained_models&flags=f
         """
 
 
         # download model if not exists
         if not os.path.exists(model_path):
-            print(f'Path {model_path} does not exists, model is downloaded from https://sid.erda.dk/cgi-sid/ls.py?share_id=dbQM0pgSlM&current_dir=pretrained_models&flags=f')
+            print(f'Path {model_path} does not exists, model is downloaded from https://sid.erda.dk/cgi-sid/ls.py?share_id=aNQa0Oz2lY&current_dir=pretrained_models&flags=f')
             download_model(model = 'awd_lstm',
                            destination_dir = model_path)
         # Get pretrained model
@@ -530,12 +530,12 @@ class ConvNetEmbedder(BaseEmbedder):
         ----------
         model_path : str
             The path to the model directory.
-            If the model path does not exist, it will be downloaded from https://sid.erda.dk/cgi-sid/ls.py?share_id=dbQM0pgSlM&current_dir=pretrained_models&flags=f
+            If the model path does not exist, it will be downloaded from https://sid.erda.dk/cgi-sid/ls.py?share_id=aNQa0Oz2lY&current_dir=pretrained_models&flags=f
         """
 
         logging.set_verbosity_error()
         if not os.path.exists(model_path):
-            print(f'Path {model_path} does not exists, model is downloaded from https://sid.erda.dk/cgi-sid/ls.py?share_id=dbQM0pgSlM&current_dir=pretrained_models&flags=f')
+            print(f'Path {model_path} does not exists, model is downloaded from https://sid.erda.dk/cgi-sid/ls.py?share_id=aNQa0Oz2lY&current_dir=pretrained_models&flags=f')
             download_model(model = 'convnet',
                            destination_dir = model_path)
         # load tokenizer

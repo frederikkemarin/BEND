@@ -76,10 +76,10 @@ hyenadna-medium-450k:
   model_path : ${embedders_dir}/hyenadna/hyenadna-medium-450k-seqlen
 resnetlm : 
   _target_ : bend.utils.embedders.ConvNetEmbedder
-  model_path : ${embedders_dir}/resnetlm/
+  model_path : ${embedders_dir}/convnet/
 awdlstm : 
   _target_ : bend.utils.embedders.AWDLSTMEmbedder
-  model_path : ${embedders_dir}/awdlstm/
+  model_path : ${embedders_dir}/awd_lstm/
 nt_transformer_ms :
   _target_ : bend.utils.embedders.NucleotideTransformerEmbedder
   model_name : InstaDeepAI/nucleotide-transformer-2.5b-multi-species
